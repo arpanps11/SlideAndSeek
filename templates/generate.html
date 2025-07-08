@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Generate PPTX</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body { font-family: Arial; padding: 30px; background: #f0f2f5; }
+        h1 { text-align: center; }
+        .section-list, .output-section {
+            max-width: 800px;
+            margin: auto;
+            margin-bottom: 30px;
+        }
+        .output-section {
+            background: #fff;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 0 5px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .song-entry { margin: 5px 0; }
+        input[type=text] {
+            width: 100%;
+            padding: 6px;
+            margin-bottom: 10px;
+        }
+        button {
+            padding: 8px 12px;
+            border: none;
+            background: #34495e;
+            color: white;
+            cursor: pointer;
+            border-radius: 5px;
+            margin-right: 10px;
+        }
+        button:hover { background: #2c3e50; }
+    </style>
+</head>
+<body>
+
+<h1>Generate Worship Slides</h1>
+
+<div class="section-list">
+    <h3>Select Sections</h3>
+    {% for sec in sections %}
+        <label><input type="checkbox" value="{{ sec }}" class="section-checkbox"> {{ sec }}</label><br>
+    {% endfor %}
+    <br>
+    <button onclick="setupSections()">Next</button>
+</div>
+
+<div id="chosen-sections"></div>
+
+<div style="text-align:center; margin-top:20px;">
+    <button onclick="submitAll()">Generate PPTX</button>
+</div>
+
+<script>
+let allSongs = [];
+
+fetch('/search', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+    body: 'query='
+})
+.then(res => res.text())
+.then(html => {
+    let parser = new DOMParser();
+    let doc = parser.parseFromString(html, 'text/html');
+    let titles = Array.from(doc.querySelectorAll('.result h2')).map(el => el.innerText);
+    allSongs = titles;
+});
+
+function setupSections() {
+    const selected = Array.from(document.querySelectorAll('.section-checkbox:checked')).map(cb => cb.value);
+    const container = document.getElementById('chosen-sections');
+    container.innerHTML = '';
+
+    selected.forEach((section, idx) => {
+        const div = document.createElement('div');
+        div.className = 'output-section';
+        div.setAttribute('data-section', section);
+
+        div.innerHTML = `
+            <h3>${section}</h3>
+            <div class="songs"></div>
+            <input type="text" placeholder="Search and add song..." oninput="searchSong(this, ${idx})">
+            <div class="suggestions" style="margin-bottom:10px;"></div>
+            <button onclick="moveSectionUp(this)">⬆️ Move Section Up</button>
+            <button onclick="moveSectionDown(this)">⬇️ Move Section Down</button>
+        `;
+
+        container.appendChild(div);
+    });
+}
+
+function searchSong(input, index) {
+    const val = input.value.toLowerCase();
+    const results = allSongs.filter(song => song.toLowerCase().includes(val)).slice(0, 5);
+
+    const suggDiv = input.nextElementSibling;
+    suggDiv.innerHTML = '';
+    results.forEach(title => {
+        const btn = document.createElement('button');
+        btn.innerText = title;
+        btn.onclick = () => {
+            const songList = input.previousElementSibling;
+            const songDiv = document.createElement('div');
+            songDiv.className = 'song-entry';
+            songDiv.innerHTML = `
+                ${title}
+                <button onclick="this.parentElement.remove()">❌</button>
+                <button onclick="moveUp(this)">⬆️</button>
+                <button onclick="moveDown(this)">⬇️</button>
+            `;
+            songList.appendChild(songDiv);
+            input.value = '';
+            suggDiv.innerHTML = '';
+        };
+        suggDiv.appendChild(btn);
+    });
+}
+
+function moveUp(btn) {
+    const el = btn.parentElement;
+    const prev = el.previousElementSibling;
+    if (prev) el.parentNode.insertBefore(el, prev);
+}
+
+function moveDown(btn) {
+    const el = btn.parentElement;
+    const next = el.nextElementSibling;
+    if (next) el.parentNode.insertBefore(next, el);
+}
+
+function moveSectionUp(btn) {
+    const section = btn.closest('.output-section');
+    const prev = section.previousElementSibling;
+    if (prev) section.parentNode.insertBefore(section, prev);
+}
+
+function moveSectionDown(btn) {
+    const section = btn.closest('.output-section');
+    const next = section.nextElementSibling;
+    if (next) section.parentNode.insertBefore(next, section);
+}
+
+function submitAll() {
+    const output = [];
+
+    document.querySelectorAll('.output-section').forEach(section => {
+        const name = section.getAttribute('data-section');
+        const songs = Array.from(section.querySelectorAll('.song-entry')).map(e => e.innerText.split('❌')[0].trim());
+        output.push({name, songs});
+    });
+
+    fetch('/generate', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({sections: output})
+    }).then(res => res.blob())
+    .then(blob => {
+        const a = document.createElement('a');
+        a.href = window.URL.createObjectURL(blob);
+        a.download = "SlideAndSeek_" + new Date().toISOString().slice(0,10).replace(/-/g, '_') + ".pptx";
+        a.click();
+    });
+}
+</script>
+
+</body>
+</html>
