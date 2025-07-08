@@ -6,6 +6,69 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link href="{{ url_for('static', filename='style.css') }}" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    .autocomplete-box {
+      position: relative;
+    }
+
+    .autocomplete-list {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: white;
+      border: 1px solid #ccc;
+      z-index: 9999;
+      max-height: 150px;
+      overflow-y: auto;
+    }
+
+    .autocomplete-list div {
+      padding: 8px;
+      cursor: pointer;
+    }
+
+    .autocomplete-list div:hover {
+      background-color: #eee;
+    }
+
+    .result-block {
+      text-align: left;
+      background: #ffffff;
+      padding: 15px;
+      margin: 10px auto;
+      border-radius: 10px;
+      max-width: 90%;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+
+    .result-block pre {
+      white-space: pre-wrap;
+      font-size: 1em;
+      line-height: 1.4;
+      margin-top: 10px;
+    }
+
+    .back-button {
+      position: fixed;
+      bottom: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #2c3e50;
+      color: white;
+      padding: 12px 20px;
+      border: none;
+      border-radius: 8px;
+      font-size: 1em;
+      cursor: pointer;
+      z-index: 999;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    }
+
+    .back-button:hover {
+      background: #1a252f;
+    }
+  </style>
 </head>
 <body>
   <div class="page slide-in">
@@ -14,30 +77,62 @@
     </header>
 
     <main>
-      <form method="POST">
+      <form method="POST" id="search-form" autocomplete="off">
         <label for="query">Search by title, key, or lyrics:</label>
-        <input list="suggestions" id="query" name="query" required>
-        <datalist id="suggestions">
-          {% for song in all_songs %}
-            <option value="{{ song.title }}">
-          {% endfor %}
-        </datalist>
+        <div class="autocomplete-box">
+          <input type="text" id="query" name="query" required>
+          <div id="autocomplete-list" class="autocomplete-list"></div>
+        </div>
         <input type="submit" value="Search">
       </form>
 
       {% if results %}
         <h2>Results</h2>
-        <ul>
-          {% for song in results %}
-            <li><strong>{{ song.title }}</strong> (Key: {{ song.key }})</li>
-          {% endfor %}
-        </ul>
+        {% for song in results %}
+          <div class="result-block">
+            <strong>{{ song.title }}</strong> (Key: {{ song.key }})
+            <pre>{{ song.lyrics }}</pre>
+          </div>
+        {% endfor %}
       {% endif %}
     </main>
 
     <footer>
       <p>🎶 SlideAndSeek | Find Your Song</p>
     </footer>
+
+    <a href="/" class="back-button">🏠 Back to Home</a>
+
+    <script>
+      const songTitles = {{ all_songs | tojson }};
+      const queryInput = document.getElementById("query");
+      const autocompleteList = document.getElementById("autocomplete-list");
+
+      queryInput.addEventListener("input", function() {
+        const val = this.value.toLowerCase();
+        autocompleteList.innerHTML = "";
+
+        if (!val) return;
+
+        songTitles.forEach(song => {
+          if (song.title.toLowerCase().includes(val)) {
+            const optionDiv = document.createElement("div");
+            optionDiv.textContent = song.title;
+            optionDiv.onclick = () => {
+              queryInput.value = song.title;
+              autocompleteList.innerHTML = "";
+            };
+            autocompleteList.appendChild(optionDiv);
+          }
+        });
+      });
+
+      document.addEventListener("click", function (e) {
+        if (e.target !== queryInput) {
+          autocompleteList.innerHTML = "";
+        }
+      });
+    </script>
   </div>
 </body>
 </html>

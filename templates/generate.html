@@ -1,172 +1,229 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Generate PPTX</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <style>
-        body { font-family: Arial; padding: 30px; background: #f0f2f5; }
-        h1 { text-align: center; }
-        .section-list, .output-section {
-            max-width: 800px;
-            margin: auto;
-            margin-bottom: 30px;
-        }
-        .output-section {
-            background: #fff;
-            padding: 15px;
-            border-radius: 8px;
-            box-shadow: 0 0 5px rgba(0,0,0,0.1);
-            margin-bottom: 20px;
-        }
-        .song-entry { margin: 5px 0; }
-        input[type=text] {
-            width: 100%;
-            padding: 6px;
-            margin-bottom: 10px;
-        }
-        button {
-            padding: 8px 12px;
-            border: none;
-            background: #34495e;
-            color: white;
-            cursor: pointer;
-            border-radius: 5px;
-            margin-right: 10px;
-        }
-        button:hover { background: #2c3e50; }
-    </style>
+  <meta charset="UTF-8">
+  <title>Generate Worship Slides</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="{{ url_for('static', filename='style.css') }}" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #f9f9fb;
+      padding: 1rem;
+      margin: 0;
+    }
+
+    h1 {
+      color: #2c3e50;
+      text-align: center;
+    }
+
+    .section-block {
+      margin: 20px 0;
+      background: #ffffff;
+      padding: 15px;
+      border-radius: 10px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      transition: transform 0.3s ease;
+    }
+
+    .section-block h3 {
+      margin-top: 0;
+      font-size: 1.2rem;
+      color: #1a1a1a;
+    }
+
+    .section-options label {
+      display: block;
+      margin-bottom: 10px;
+      font-size: 1rem;
+    }
+
+    input[type="text"] {
+      width: 100%;
+      padding: 10px;
+      font-size: 1rem;
+      margin: 10px 0;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+    }
+
+    .song-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    .song-list li {
+      background: #eaecef;
+      margin-bottom: 8px;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 0.95rem;
+      cursor: grab;
+    }
+
+    .generate-btn {
+      width: 100%;
+      padding: 15px;
+      font-size: 1.1rem;
+      background: #3b5f7a;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      margin-top: 20px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+
+    .generate-btn:hover {
+      background: #2c4960;
+    }
+
+    .back-button {
+      position: fixed;
+      bottom: 15px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #2c3e50;
+      color: white;
+      padding: 12px 20px;
+      border: none;
+      border-radius: 8px;
+      font-size: 1em;
+      cursor: pointer;
+      z-index: 999;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    }
+
+    footer {
+      text-align: center;
+      margin-top: 2rem;
+      color: #777;
+    }
+
+    .fade-in {
+      animation: fadeIn 0.5s ease-in;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
 </head>
 <body>
+  <h1 class="fade-in">Generate Worship Slides</h1>
 
-<h1>Generate Worship Slides</h1>
+  <form id="generateForm" class="fade-in">
+    <div class="section-options">
+      <label><input type="checkbox" name="section" value="Praise and Worship"> Praise and Worship</label>
+      <label><input type="checkbox" name="section" value="Opening Hymn"> Opening Hymn</label>
+      <label><input type="checkbox" name="section" value="Responsive Reading"> Responsive Reading</label>
+      <label><input type="checkbox" name="section" value="Offertory Hymn"> Offertory Hymn</label>
+      <label><input type="checkbox" name="section" value="Communion Hymn"> Communion Hymn</label>
+      <label><input type="checkbox" name="section" value="Extras"> Extras</label>
+      <label><input type="checkbox" name="section" value="Benediction"> Benediction</label>
+    </div>
 
-<div class="section-list">
-    <h3>Select Sections</h3>
-    {% for sec in sections %}
-        <label><input type="checkbox" value="{{ sec }}" class="section-checkbox"> {{ sec }}</label><br>
-    {% endfor %}
-    <br>
-    <button onclick="setupSections()">Next</button>
-</div>
+    <div id="selected-sections"></div>
 
-<div id="chosen-sections"></div>
+    <button type="submit" class="generate-btn">📥 Generate PPTX</button>
+  </form>
 
-<div style="text-align:center; margin-top:20px;">
-    <button onclick="submitAll()">Generate PPTX</button>
-</div>
+  <a href="/" class="back-button">🏠 Back to Home</a>
 
-<script>
-let allSongs = [];
+  <footer>
+    <p>🎶 SlideAndSeek | Made for Worship Teams</p>
+  </footer>
 
-fetch('/search', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-    body: 'query='
-})
-.then(res => res.text())
-.then(html => {
-    let parser = new DOMParser();
-    let doc = parser.parseFromString(html, 'text/html');
-    let titles = Array.from(doc.querySelectorAll('.result h2')).map(el => el.innerText);
-    allSongs = titles;
-});
+  <script>
+    const allSongs = {{ all_songs | tojson }};
+    const selectedContainer = document.getElementById("selected-sections");
 
-function setupSections() {
-    const selected = Array.from(document.querySelectorAll('.section-checkbox:checked')).map(cb => cb.value);
-    const container = document.getElementById('chosen-sections');
-    container.innerHTML = '';
-
-    selected.forEach((section, idx) => {
-        const div = document.createElement('div');
-        div.className = 'output-section';
-        div.setAttribute('data-section', section);
-
-        div.innerHTML = `
-            <h3>${section}</h3>
-            <div class="songs"></div>
-            <input type="text" placeholder="Search and add song..." oninput="searchSong(this, ${idx})">
-            <div class="suggestions" style="margin-bottom:10px;"></div>
-            <button onclick="moveSectionUp(this)">⬆️ Move Section Up</button>
-            <button onclick="moveSectionDown(this)">⬇️ Move Section Down</button>
-        `;
-
-        container.appendChild(div);
-    });
-}
-
-function searchSong(input, index) {
-    const val = input.value.toLowerCase();
-    const results = allSongs.filter(song => song.toLowerCase().includes(val)).slice(0, 5);
-
-    const suggDiv = input.nextElementSibling;
-    suggDiv.innerHTML = '';
-    results.forEach(title => {
-        const btn = document.createElement('button');
-        btn.innerText = title;
-        btn.onclick = () => {
-            const songList = input.previousElementSibling;
-            const songDiv = document.createElement('div');
-            songDiv.className = 'song-entry';
-            songDiv.innerHTML = `
-                ${title}
-                <button onclick="this.parentElement.remove()">❌</button>
-                <button onclick="moveUp(this)">⬆️</button>
-                <button onclick="moveDown(this)">⬇️</button>
-            `;
-            songList.appendChild(songDiv);
-            input.value = '';
-            suggDiv.innerHTML = '';
-        };
-        suggDiv.appendChild(btn);
-    });
-}
-
-function moveUp(btn) {
-    const el = btn.parentElement;
-    const prev = el.previousElementSibling;
-    if (prev) el.parentNode.insertBefore(el, prev);
-}
-
-function moveDown(btn) {
-    const el = btn.parentElement;
-    const next = el.nextElementSibling;
-    if (next) el.parentNode.insertBefore(next, el);
-}
-
-function moveSectionUp(btn) {
-    const section = btn.closest('.output-section');
-    const prev = section.previousElementSibling;
-    if (prev) section.parentNode.insertBefore(section, prev);
-}
-
-function moveSectionDown(btn) {
-    const section = btn.closest('.output-section');
-    const next = section.nextElementSibling;
-    if (next) section.parentNode.insertBefore(next, section);
-}
-
-function submitAll() {
-    const output = [];
-
-    document.querySelectorAll('.output-section').forEach(section => {
-        const name = section.getAttribute('data-section');
-        const songs = Array.from(section.querySelectorAll('.song-entry')).map(e => e.innerText.split('❌')[0].trim());
-        output.push({name, songs});
+    document.querySelectorAll('input[type=checkbox]').forEach(cb => {
+      cb.addEventListener("change", () => {
+        updateSections();
+      });
     });
 
-    fetch('/generate', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({sections: output})
-    }).then(res => res.blob())
-    .then(blob => {
-        const a = document.createElement('a');
-        a.href = window.URL.createObjectURL(blob);
-        a.download = "SlideAndSeek_" + new Date().toISOString().slice(0,10).replace(/-/g, '_') + ".pptx";
-        a.click();
-    });
-}
-</script>
+    function updateSections() {
+      selectedContainer.innerHTML = "";
+      const checked = document.querySelectorAll('input[type=checkbox]:checked');
 
+      checked.forEach(cb => {
+        const wrapper = document.createElement("div");
+        wrapper.className = "section-block fade-in";
+        wrapper.dataset.section = cb.value;
+
+        const h3 = document.createElement("h3");
+        h3.textContent = cb.value;
+
+        const input = document.createElement("input");
+        input.type = "text";
+        input.placeholder = "Type to add a song…";
+        input.dataset.section = cb.value;
+
+        const list = document.createElement("ul");
+        list.className = "song-list";
+        list.id = "songs-" + cb.value.replace(/\s+/g, '-');
+
+        input.addEventListener("input", () => {
+          const val = input.value.trim().toLowerCase();
+          const match = allSongs.find(song => song.title.toLowerCase() === val);
+          if (match) {
+            const li = document.createElement("li");
+            li.textContent = match.title;
+            list.appendChild(li);
+            input.value = "";
+          }
+        });
+
+        wrapper.appendChild(h3);
+        wrapper.appendChild(input);
+        wrapper.appendChild(list);
+        selectedContainer.appendChild(wrapper);
+
+        Sortable.create(list, { animation: 150 });
+      });
+
+      Sortable.create(selectedContainer, {
+        animation: 200,
+        handle: ".section-block"
+      });
+    }
+
+    document.getElementById("generateForm").addEventListener("submit", async e => {
+      e.preventDefault();
+
+      const blocks = document.querySelectorAll(".section-block");
+      const sections = [];
+
+      blocks.forEach(block => {
+        const section = block.dataset.section;
+        const songDivs = block.querySelectorAll("li");
+        const songs = Array.from(songDivs).map(li => li.textContent.trim());
+        if (songs.length) sections.push({ section, songs });
+      });
+
+      const response = await fetch("/generate", {
+        method: "POST",
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sections })
+      });
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      const now = new Date();
+      const dateStr = `${now.getFullYear()}_${(now.getMonth()+1).toString().padStart(2, '0')}_${now.getDate().toString().padStart(2, '0')}`;
+      a.href = url;
+      a.download = `SlideAndSeek_${dateStr}.pptx`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    });
+  </script>
 </body>
 </html>
