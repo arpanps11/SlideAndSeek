@@ -144,8 +144,8 @@
       <h2>Results</h2>
       {% for song in results %}
         <div class="result-block">
-          <strong>{{ song[0] }}</strong> (Key: {{ song[2] }})
-          <pre>{{ song[1] }}</pre>
+          <strong>{{ song.title }}</strong> (Key: {{ song.key }})
+          <pre>{{ song.lyrics }}</pre>
         </div>
       {% endfor %}
     {% elif searched %}
