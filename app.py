@@ -9,8 +9,6 @@ import sqlite3
 app = Flask(__name__)
 DB_FILE = 'songs.db'
 
-
-# Ensure songs table exists
 def init_db():
     conn = sqlite3.connect(DB_FILE)
     cursor = conn.cursor()
@@ -27,8 +25,11 @@ def init_db():
     conn.commit()
     conn.close()
 
+# ✅ This guarantees init_db() runs on any hosting setup
+@app.before_first_request
+def initialize_database():
+    init_db()
 
-# Helper: get song by ID
 def get_song_by_id(song_id):
     conn = sqlite3.connect(DB_FILE)
     cursor = conn.cursor()
@@ -37,8 +38,6 @@ def get_song_by_id(song_id):
     conn.close()
     return song
 
-
-# Helper: get all songs for autocomplete
 def get_all_songs():
     conn = sqlite3.connect(DB_FILE)
     cursor = conn.cursor()
@@ -47,8 +46,6 @@ def get_all_songs():
     conn.close()
     return songs
 
-
-# Helper: add lyrics slide
 def add_slide(prs, text, title_slide=False):
     slide_layout = prs.slide_layouts[6]
     slide = prs.slides.add_slide(slide_layout)
@@ -65,11 +62,9 @@ def add_slide(prs, text, title_slide=False):
     font.color.rgb = RGBColor(0, 0, 0)
     return slide
 
-
 @app.route('/')
 def home():
     return render_template('home.html')
-
 
 @app.route('/add', methods=['GET', 'POST'])
 def add():
@@ -89,7 +84,6 @@ def add():
         return 'Song added successfully!'
     return render_template('add.html')
 
-
 @app.route('/search', methods=['GET'])
 def search():
     query = request.args.get('query', '').strip()
@@ -101,7 +95,6 @@ def search():
     conn.close()
     return render_template('search.html', results=results, all_songs=get_all_songs(), query=query)
 
-
 @app.route('/generate', methods=['GET', 'POST'])
 def generate():
     if request.method == 'POST':
@@ -110,7 +103,6 @@ def generate():
 
         for section in sections:
             add_slide(prs, section, title_slide=True)
-
             song_ids = request.form.getlist(f'{section}_songs[]')
             if song_ids:
                 for i, song_id in enumerate(song_ids):
@@ -145,10 +137,6 @@ def generate():
         return send_file(filepath, as_attachment=True)
 
     return render_template('generate.html')
-
-
-# 🔥 Make sure DB is initialized on startup
-init_db()
 
 if __name__ == '__main__':
     app.run(debug=True)
