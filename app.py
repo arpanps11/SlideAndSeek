@@ -1,30 +1,47 @@
 
-from flask import Flask, render_template, request, redirect, url_for, send_file
-import sqlite3
+from flask import Flask, render_template, request, send_file
 from pptx import Presentation
 from pptx.util import Inches, Pt
-from io import BytesIO
-from datetime import datetime
+from pptx.enum.shapes import MSO_AUTO_SHAPE_TYPE
+from pptx.dml.color import RGBColor
+import os
+import datetime
+import sqlite3
 
 app = Flask(__name__)
+DB_FILE = 'songs.db'
 
-def init_db():
-    conn = sqlite3.connect('songs.db')
-    c = conn.cursor()
-    c.execute('''CREATE TABLE IF NOT EXISTS songs (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    title TEXT NOT NULL,
-                    lyrics TEXT NOT NULL,
-                    key TEXT,
-                    song_number TEXT,
-                    page_number TEXT
-                )''')
-    conn.commit()
+
+def get_song_by_id(song_id):
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    cursor.execute("SELECT title, lyrics FROM songs WHERE id=?", (song_id,))
+    song = cursor.fetchone()
     conn.close()
+    return song
+
+
+def add_slide(prs, text, title_slide=False):
+    slide_layout = prs.slide_layouts[6]
+    slide = prs.slides.add_slide(slide_layout)
+    txBox = slide.shapes.add_textbox(Inches(0.5), Inches(1), Inches(9), Inches(5.5))
+    tf = txBox.text_frame
+    tf.word_wrap = True
+    p = tf.paragraphs[0]
+    run = p.add_run()
+    run.text = text
+    font = run.font
+    font.size = Pt(36 if title_slide else 32)
+    font.name = 'Calibri'
+    font.bold = True
+    font.color.rgb = RGBColor(0, 0, 0)
+    return slide
+
 
 @app.route('/')
 def home():
     return render_template('home.html')
+
 
 @app.route('/add', methods=['GET', 'POST'])
 def add():
@@ -32,104 +49,75 @@ def add():
         title = request.form['title']
         lyrics = request.form['lyrics']
         key = request.form['key']
-        song_number = request.form.get('song_number')
-        page_number = request.form.get('page_number')
-        conn = sqlite3.connect('songs.db')
-        c = conn.cursor()
-        c.execute("INSERT INTO songs (title, lyrics, key, song_number, page_number) VALUES (?, ?, ?, ?, ?)",
-                  (title, lyrics, key, song_number, page_number))
+        song_number = request.form.get('song_number', '')
+        page_number = request.form.get('page_number', '')
+
+        conn = sqlite3.connect(DB_FILE)
+        cursor = conn.cursor()
+        cursor.execute("INSERT INTO songs (title, lyrics, key, song_number, page_number) VALUES (?, ?, ?, ?, ?)",
+                       (title, lyrics, key, song_number, page_number))
         conn.commit()
         conn.close()
-        return redirect(url_for('home'))
+        return 'Song added successfully!'
     return render_template('add.html')
+
 
 @app.route('/search')
 def search():
     query = request.args.get('query', '')
-    conn = sqlite3.connect('songs.db')
-    c = conn.cursor()
-    c.execute("SELECT title, key, lyrics FROM songs WHERE title LIKE ? OR lyrics LIKE ?", (f'%{query}%', f'%{query}%'))
-    results = c.fetchall()
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    cursor.execute("SELECT id, title, key FROM songs WHERE title LIKE ? OR lyrics LIKE ?", (f'%{query}%', f'%{query}%'))
+    results = cursor.fetchall()
     conn.close()
-    return render_template('search.html', results=results, query=query)
+    return render_template('search.html', results=results)
+
 
 @app.route('/generate', methods=['GET', 'POST'])
 def generate():
-    conn = sqlite3.connect('songs.db')
-    c = conn.cursor()
-    c.execute("SELECT id, title FROM songs")
-    all_songs = c.fetchall()
-
     if request.method == 'POST':
-        data = request.form.to_dict(flat=False)
+        sections = request.form.getlist('sections[]')
         prs = Presentation()
-        blank_slide_layout = prs.slide_layouts[6]
 
-        section_order = data['sections[]']
-        for section in section_order:
-            songs_in_section = data.get(f'{section}_songs[]', [])
-            if not songs_in_section:
-                continue
+        for section in sections:
+            add_slide(prs, section, title_slide=True)
 
-            if section in ['Opening Hymn', 'Offertory Hymn', 'Communion Hymn']:
-                c.execute("SELECT title, song_number, page_number, lyrics FROM songs WHERE id = ?", (songs_in_section[0],))
-                song = c.fetchone()
-                if song:
-                    title, number, page, lyrics = song
-                    header_slide = prs.slides.add_slide(blank_slide_layout)
-                    tf = header_slide.shapes.add_textbox(Inches(1), Inches(2), Inches(8), Inches(1.5)).text_frame
-                    header_text = f"{section}
-{title}"
-                    if number:
-                        header_text += f"
-Song No: {number}"
-                    if page:
-                        header_text += f"
-Page No: {page}"
-                    tf.text = header_text
-                    tf.paragraphs[0].font.size = Pt(32)
-                    for stanza in lyrics.strip().split('
-
-'):
-                        slide = prs.slides.add_slide(blank_slide_layout)
-                        text_frame = slide.shapes.add_textbox(Inches(1), Inches(1), Inches(8), Inches(5)).text_frame
-                        for line in stanza.strip().split('
-'):
-                            p = text_frame.add_paragraph()
-                            p.text = line.strip()
-                            p.font.size = Pt(24)
-            else:  # Praise and Worship or others
-                for song_id in songs_in_section:
-                    c.execute("SELECT title, lyrics FROM songs WHERE id = ?", (song_id,))
-                    song = c.fetchone()
+            song_ids = request.form.getlist(f'{section}_songs[]')
+            if song_ids:
+                for i, song_id in enumerate(song_ids):
+                    song = get_song_by_id(song_id)
                     if song:
                         title, lyrics = song
-                        title_slide = prs.slides.add_slide(blank_slide_layout)
-                        tf = title_slide.shapes.add_textbox(Inches(1), Inches(2), Inches(8), Inches(1.5)).text_frame
-                        tf.text = title
-                        tf.paragraphs[0].font.size = Pt(36)
-                        for stanza in lyrics.strip().split('
+                        if section in ["Opening Hymn", "Offertory Hymn", "Communion Hymn"] and i == 0:
+                            number = request.form.get(f'{section}_number', '')
+                            page = request.form.get(f'{section}_page', '')
+                            details = f"Song: {title}"
+                            if number:
+                                details += f"\nSong No: {number}"
+                            if page:
+                                details += f" | Page No: {page}"
+                            add_slide(prs, details)
 
-'):
-                            slide = prs.slides.add_slide(blank_slide_layout)
-                            text_frame = slide.shapes.add_textbox(Inches(1), Inches(1), Inches(8), Inches(5)).text_frame
-                            for line in stanza.strip().split('
-'):
-                                p = text_frame.add_paragraph()
-                                p.text = line.strip()
-                                p.font.size = Pt(24)
+                        elif section == "Praise and Worship":
+                            add_slide(prs, title, title_slide=True)
 
-        output = BytesIO()
-        date_str = datetime.now().strftime('%Y_%m_%d')
-        filename = f"{date_str}_Sunday_Service_Slides.pptx"
-        prs.save(output)
-        output.seek(0)
-        conn.close()
-        return send_file(output, as_attachment=True, download_name=filename)
+                        stanzas = lyrics.strip().split('\n\n')
+                        for stanza in stanzas:
+                            clean_lines = [line.replace('_x000D_', '').strip() for line in stanza.strip().split('\n') if line.strip()]
+                            stanza_text = '\n'.join(clean_lines)
+                            if stanza_text:
+                                add_slide(prs, stanza_text)
 
-    conn.close()
-    return render_template('generate.html', songs=all_songs)
+        today = datetime.date.today().strftime("%Y_%m_%d")
+        filename = f"{today}_church_service_slides.pptx"
+        filepath = os.path.join("generated", filename)
+        if not os.path.exists("generated"):
+            os.makedirs("generated")
+        prs.save(filepath)
+        return send_file(filepath, as_attachment=True)
+
+    return render_template('generate.html')
+
 
 if __name__ == '__main__':
-    init_db()
     app.run(debug=True)

@@ -1,251 +1,160 @@
+
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8">
-  <title>Generate Worship Slides</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link href="{{ url_for('static', filename='style.css') }}" rel="stylesheet">
-  <style>
-    body {
-      font-family: 'Arial', sans-serif;
-      background: #f9f9fb;
-      padding: 1rem;
-      margin: 0;
-    }
+    <title>Generate Worship Slides</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background-color: #fdfaf6;
+            color: #2c3e50;
+            padding: 20px;
+            max-width: 600px;
+            margin: auto;
+        }
+        h1 {
+            text-align: center;
+            color: #34495e;
+        }
+        form {
+            margin-top: 20px;
+        }
+        label, select, input {
+            display: block;
+            width: 100%;
+            margin-bottom: 15px;
+            font-size: 1em;
+        }
+        .section-container {
+            margin-bottom: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            background-color: #ffffff;
+        }
+        .song-search {
+            margin-top: 10px;
+        }
+        button {
+            background-color: #2c3e50;
+            color: white;
+            padding: 12px 18px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1em;
+            width: 100%;
+        }
+        button:hover {
+            background-color: #1f2d3a;
+        }
+        .chosen-song {
+            background-color: #ecf0f1;
+            margin: 5px 0;
+            padding: 8px;
+            border-radius: 4px;
+        }
+        .extra-fields {
+            margin-top: 10px;
+        }
+    </style>
+    <script>
+        let allSongs = {};
+        let selectedSections = [];
 
-    h1 {
-      text-align: center;
-      color: #2c3e50;
-      margin-bottom: 20px;
-    }
+        async function fetchSongs() {
+            const response = await fetch('/search?query=');
+            const html = await response.text();
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            const results = doc.querySelectorAll('li');
+            results.forEach(li => {
+                const title = li.dataset.title;
+                const id = li.dataset.id;
+                allSongs[title] = id;
+            });
+        }
 
-    .section-options label {
-      display: block;
-      font-size: 1rem;
-      margin: 10px 0;
-    }
+        function isSingleSongSection(section) {
+            return ["Opening Hymn", "Offertory Hymn", "Communion Hymn"].includes(section);
+        }
 
-    .section-block {
-      background: #fff;
-      padding: 15px;
-      border-radius: 10px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-      margin-top: 15px;
-    }
+        function addSectionUI() {
+            selectedSections = Array.from(document.querySelectorAll('input[name="sections[]"]:checked')).map(i => i.value);
+            const container = document.getElementById('sectionsArea');
+            container.innerHTML = '';
 
-    .section-block h3 {
-      margin-top: 0;
-    }
+            selectedSections.forEach(section => {
+                const div = document.createElement('div');
+                div.className = 'section-container';
+                div.innerHTML = `<h3>${section}</h3>
+                    <input type="text" placeholder="Search for song..." oninput="promptSong(this, '${section}')" list="songs-${section}" />
+                    <datalist id="songs-${section}"></datalist>
+                    <div id="${section}-songs-list"></div>`;
+                container.appendChild(div);
+            });
+        }
 
-    input[type="text"] {
-      width: 100%;
-      padding: 10px;
-      font-size: 1rem;
-      margin: 10px 0;
-      border: 1px solid #ccc;
-      border-radius: 6px;
-    }
+        function promptSong(input, section) {
+            const datalist = document.getElementById('songs-' + section);
+            datalist.innerHTML = '';
+            for (const title in allSongs) {
+                if (title.toLowerCase().includes(input.value.toLowerCase())) {
+                    const opt = document.createElement('option');
+                    opt.value = title;
+                    datalist.appendChild(opt);
+                }
+            }
 
-    .suggestions {
-      position: relative;
-    }
+            input.addEventListener('change', function () {
+                const selectedId = allSongs[input.value];
+                if (selectedId) {
+                    const songList = document.getElementById(section + '-songs-list');
+                    const div = document.createElement('div');
+                    div.className = 'chosen-song';
+                    div.innerHTML = `<strong>${input.value}</strong>`;
+                    songList.innerHTML = '';  // allow only one song for single-song sections
+                    songList.appendChild(div);
 
-    .suggestion-list {
-      position: absolute;
-      top: 100%;
-      left: 0;
-      right: 0;
-      background: white;
-      border: 1px solid #ccc;
-      border-top: none;
-      z-index: 10;
-      max-height: 150px;
-      overflow-y: auto;
-    }
+                    const hiddenTitle = document.createElement('input');
+                    hiddenTitle.type = 'hidden';
+                    hiddenTitle.name = `${section}_songs[]`;
+                    hiddenTitle.value = selectedId;
+                    songList.appendChild(hiddenTitle);
 
-    .suggestion-item {
-      padding: 8px;
-      cursor: pointer;
-    }
+                    if (isSingleSongSection(section)) {
+                        const extraFields = document.createElement('div');
+                        extraFields.className = 'extra-fields';
+                        extraFields.innerHTML = `
+                            <input type="text" name="${section}_number" placeholder="Song Number (optional)">
+                            <input type="text" name="${section}_page" placeholder="Page Number (optional)">
+                        `;
+                        songList.appendChild(extraFields);
+                    }
 
-    .suggestion-item:hover {
-      background: #f2f2f2;
-    }
+                    input.value = '';
+                }
+            });
+        }
 
-    .song-list {
-      list-style: none;
-      padding: 0;
-    }
-
-    .song-list li {
-      background: #eaecef;
-      margin: 6px 0;
-      padding: 8px 12px;
-      border-radius: 6px;
-      font-size: 0.95rem;
-    }
-
-    .generate-btn {
-      width: 100%;
-      padding: 15px;
-      font-size: 1.1rem;
-      background: #34495e;
-      color: white;
-      border: none;
-      border-radius: 8px;
-      margin-top: 20px;
-    }
-
-    .generate-btn:hover {
-      background: #2c3e50;
-    }
-
-    .back-button {
-      position: fixed;
-      bottom: 15px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: #2c3e50;
-      color: white;
-      padding: 12px 20px;
-      border: none;
-      border-radius: 8px;
-      font-size: 1em;
-      cursor: pointer;
-      z-index: 999;
-    }
-  </style>
+        window.onload = fetchSongs;
+    </script>
 </head>
 <body>
-  <h1>Generate Worship Slides</h1>
+    <h1>Generate Slides</h1>
+    <form method="post">
+        <label>Select Sections to Include:</label>
+        <label><input type="checkbox" name="sections[]" value="Praise and Worship" onchange="addSectionUI()"> Praise and Worship</label>
+        <label><input type="checkbox" name="sections[]" value="Opening Hymn" onchange="addSectionUI()"> Opening Hymn</label>
+        <label><input type="checkbox" name="sections[]" value="Responsive Reading" onchange="addSectionUI()"> Responsive Reading</label>
+        <label><input type="checkbox" name="sections[]" value="Offertory Hymn" onchange="addSectionUI()"> Offertory Hymn</label>
+        <label><input type="checkbox" name="sections[]" value="Communion Hymn" onchange="addSectionUI()"> Communion Hymn</label>
+        <label><input type="checkbox" name="sections[]" value="Extras" onchange="addSectionUI()"> Extras</label>
+        <label><input type="checkbox" name="sections[]" value="Benediction" onchange="addSectionUI()"> Benediction</label>
 
-  <form id="generateForm">
-    <div class="section-options">
-      <label><input type="checkbox" name="section" value="Praise and Worship"> Praise and Worship</label>
-      <label><input type="checkbox" name="section" value="Opening Hymn"> Opening Hymn</label>
-      <label><input type="checkbox" name="section" value="Responsive Reading"> Responsive Reading</label>
-      <label><input type="checkbox" name="section" value="Offertory Hymn"> Offertory Hymn</label>
-      <label><input type="checkbox" name="section" value="Communion Hymn"> Communion Hymn</label>
-      <label><input type="checkbox" name="section" value="Extras"> Extras</label>
-      <label><input type="checkbox" name="section" value="Benediction"> Benediction</label>
-    </div>
-
-    <div id="selected-sections"></div>
-
-    <button type="submit" class="generate-btn">📥 Generate PPTX</button>
-  </form>
-
-  <a href="/" class="back-button">🏠 Back to Home</a>
-
-  <script>
-    const allSongs = {{ all_songs | tojson }};
-    const selectedContainer = document.getElementById("selected-sections");
-
-    document.querySelectorAll('input[type=checkbox]').forEach(cb => {
-      cb.addEventListener("change", () => {
-        updateSections();
-      });
-    });
-
-    function updateSections() {
-      selectedContainer.innerHTML = "";
-      const checked = document.querySelectorAll('input[type=checkbox]:checked');
-
-      checked.forEach(cb => {
-        const sectionName = cb.value;
-        const wrapper = document.createElement("div");
-        wrapper.className = "section-block";
-
-        const h3 = document.createElement("h3");
-        h3.textContent = sectionName;
-
-        const inputWrap = document.createElement("div");
-        inputWrap.className = "suggestions";
-
-        const input = document.createElement("input");
-        input.type = "text";
-        input.placeholder = "Search and add a song...";
-        input.autocomplete = "off";
-
-        const suggestionList = document.createElement("div");
-        suggestionList.className = "suggestion-list";
-        suggestionList.style.display = "none";
-
-        const songList = document.createElement("ul");
-        songList.className = "song-list";
-
-        input.addEventListener("input", () => {
-          const val = input.value.toLowerCase();
-          const matches = allSongs.filter(song =>
-            song.title.toLowerCase().includes(val)
-          );
-
-          suggestionList.innerHTML = "";
-          if (val && matches.length) {
-            matches.forEach(song => {
-              const div = document.createElement("div");
-              div.textContent = song.title;
-              div.className = "suggestion-item";
-              div.addEventListener("click", () => {
-                const li = document.createElement("li");
-                li.textContent = song.title;
-                songList.appendChild(li);
-                input.value = "";
-                suggestionList.style.display = "none";
-              });
-              suggestionList.appendChild(div);
-            });
-            suggestionList.style.display = "block";
-          } else {
-            suggestionList.style.display = "none";
-          }
-        });
-
-        document.addEventListener("click", e => {
-          if (!inputWrap.contains(e.target)) {
-            suggestionList.style.display = "none";
-          }
-        });
-
-        inputWrap.appendChild(input);
-        inputWrap.appendChild(suggestionList);
-        wrapper.appendChild(h3);
-        wrapper.appendChild(inputWrap);
-        wrapper.appendChild(songList);
-        selectedContainer.appendChild(wrapper);
-      });
-    }
-
-    document.getElementById("generateForm").addEventListener("submit", async e => {
-      e.preventDefault();
-
-      const blocks = document.querySelectorAll(".section-block");
-      const sections = [];
-
-      blocks.forEach(block => {
-        const section = block.querySelector("h3").textContent;
-        const songDivs = block.querySelectorAll("li");
-        const songs = Array.from(songDivs).map(li => li.textContent.trim());
-        if (songs.length) sections.push({ section, songs });
-      });
-
-      const response = await fetch("/generate", {
-        method: "POST",
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sections })
-      });
-
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      const now = new Date();
-      const dateStr = `${now.getFullYear()}_${(now.getMonth()+1).toString().padStart(2, '0')}_${now.getDate().toString().padStart(2, '0')}`;
-      a.href = url;
-      a.download = `SlideAndSeek_${dateStr}.pptx`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-    });
-  </script>
+        <div id="sectionsArea"></div>
+        <button type="submit">Generate PPTX</button>
+    </form>
 </body>
 </html>
