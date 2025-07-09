@@ -1,4 +1,3 @@
-
 from flask import Flask, render_template, request, send_file
 from pptx import Presentation
 from pptx.util import Inches, Pt
@@ -11,7 +10,6 @@ import sqlite3
 app = Flask(__name__)
 DB_FILE = 'songs.db'
 
-
 def get_song_by_id(song_id):
     conn = sqlite3.connect(DB_FILE)
     cursor = conn.cursor()
@@ -20,6 +18,13 @@ def get_song_by_id(song_id):
     conn.close()
     return song
 
+def get_all_songs():
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    cursor.execute("SELECT id, title FROM songs")
+    songs = [{'id': row[0], 'title': row[1]} for row in cursor.fetchall()]
+    conn.close()
+    return songs
 
 def add_slide(prs, text, title_slide=False):
     slide_layout = prs.slide_layouts[6]
@@ -37,11 +42,9 @@ def add_slide(prs, text, title_slide=False):
     font.color.rgb = RGBColor(0, 0, 0)
     return slide
 
-
 @app.route('/')
 def home():
     return render_template('home.html')
-
 
 @app.route('/add', methods=['GET', 'POST'])
 def add():
@@ -61,17 +64,18 @@ def add():
         return 'Song added successfully!'
     return render_template('add.html')
 
-
-@app.route('/search')
+@app.route('/search', methods=['GET'])
 def search():
     query = request.args.get('query', '')
-    conn = sqlite3.connect(DB_FILE)
-    cursor = conn.cursor()
-    cursor.execute("SELECT id, title, key FROM songs WHERE title LIKE ? OR lyrics LIKE ?", (f'%{query}%', f'%{query}%'))
-    results = cursor.fetchall()
-    conn.close()
-    return render_template('search.html', results=results)
-
+    results = None
+    if query:
+        conn = sqlite3.connect(DB_FILE)
+        cursor = conn.cursor()
+        cursor.execute("SELECT id, title, key, lyrics FROM songs WHERE title LIKE ? OR lyrics LIKE ?", 
+                       (f'%{query}%', f'%{query}%'))
+        results = cursor.fetchall()
+        conn.close()
+    return render_template('search.html', results=results, all_songs=get_all_songs())
 
 @app.route('/generate', methods=['GET', 'POST'])
 def generate():
@@ -117,7 +121,6 @@ def generate():
         return send_file(filepath, as_attachment=True)
 
     return render_template('generate.html')
-
 
 if __name__ == '__main__':
     app.run(debug=True)
