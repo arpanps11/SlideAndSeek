@@ -141,16 +141,16 @@
     </form>
 
     {% if results %}
-      <h2>Results</h2>
-      {% for song in results %}
-        <div class="result-block">
-          <strong>{{ song.title }}</strong> (Key: {{ song.key }})
-          <pre>{{ song.lyrics }}</pre>
-        </div>
-      {% endfor %}
-    {% elif searched %}
-      <p><em>No results found for "{{ query }}"</em></p>
-    {% endif %}
+  <h2>Results</h2>
+  {% for song in results %}
+    <div class="result-block">
+      <strong>{{ song[0] }}</strong> (Key: {{ song[2] }})
+      <pre>{{ song[1] }}</pre>
+    </div>
+  {% endfor %}
+{% elif searched %}
+  <p><em>No results found for "{{ query }}"</em></p>
+{% endif %}
   </main>
 
   <footer>

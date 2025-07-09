@@ -3,29 +3,34 @@ import sqlite3
 import os
 
 app = Flask(__name__)
-DB_FILE = 'songs.db'
+
+DATABASE = 'songs.db'
 
 def init_db():
-    conn = sqlite3.connect(DB_FILE)
-    cursor = conn.cursor()
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS songs (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            title TEXT NOT NULL UNIQUE,
-            lyrics TEXT NOT NULL,
-            key TEXT NOT NULL
-        )
-    ''')
-    conn.commit()
-    conn.close()
+    with sqlite3.connect(DATABASE) as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS songs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                title TEXT UNIQUE,
+                lyrics TEXT,
+                key TEXT
+            )
+        ''')
+        conn.commit()
 
 def get_all_songs():
-    conn = sqlite3.connect(DB_FILE)
-    cursor = conn.cursor()
-    cursor.execute("SELECT id, title FROM songs")
-    songs = cursor.fetchall()
-    conn.close()
-    return [{'id': row[0], 'title': row[1]} for row in songs]
+    with sqlite3.connect(DATABASE) as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT id, title FROM songs")
+        return [{'id': row[0], 'title': row[1]} for row in cursor.fetchall()]
+
+def search_songs(query):
+    with sqlite3.connect(DATABASE) as conn:
+        cursor = conn.cursor()
+        query = f"%{query}%"
+        cursor.execute("SELECT title, lyrics, key FROM songs WHERE title LIKE ? OR lyrics LIKE ? OR key LIKE ?", (query, query, query))
+        return cursor.fetchall()
 
 @app.route('/')
 def home():
@@ -42,40 +47,34 @@ def add_song():
         if not title or not lyrics or not key:
             message = 'All fields are required.'
         else:
-            conn = sqlite3.connect(DB_FILE)
-            cursor = conn.cursor()
-            cursor.execute("SELECT * FROM songs WHERE title = ?", (title,))
-            existing_song = cursor.fetchone()
-            if existing_song:
-                message = f"A song with the title \"{title}\" already exists."
-            else:
-                cursor.execute("INSERT INTO songs (title, lyrics, key) VALUES (?, ?, ?)", (title, lyrics, key))
-                conn.commit()
-                message = 'Song added successfully.'
-            conn.close()
+            try:
+                with sqlite3.connect(DATABASE) as conn:
+                    cursor = conn.cursor()
+                    cursor.execute("INSERT INTO songs (title, lyrics, key) VALUES (?, ?, ?)", (title, lyrics, key))
+                    conn.commit()
+                message = 'Song added successfully!'
+            except sqlite3.IntegrityError:
+                message = 'A song with this title already exists.'
 
     return render_template('add.html', message=message)
 
 @app.route('/search', methods=['GET', 'POST'])
 def search():
     results = []
-    query = ""
+    query = ''
     searched = False
-    all_songs = get_all_songs()
 
     if request.method == 'POST':
         query = request.form['query'].strip()
+        results = search_songs(query)
         searched = True
-        if query:
-            conn = sqlite3.connect(DB_FILE)
-            cursor = conn.cursor()
-            cursor.execute("SELECT title, lyrics, key FROM songs WHERE title LIKE ? OR lyrics LIKE ? OR key LIKE ?", 
-                           ('%'+query+'%', '%'+query+'%', '%'+query+'%'))
-            results = cursor.fetchall()
-            conn.close()
 
+    all_songs = get_all_songs()
     return render_template('search.html', results=results, query=query, searched=searched, all_songs=all_songs)
 
-if __name__ == '__main__':
+# Initialize database only if it doesn't exist
+if not os.path.exists(DATABASE):
     init_db()
+
+if __name__ == '__main__':
     app.run(debug=True)
