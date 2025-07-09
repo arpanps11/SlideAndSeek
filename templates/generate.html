@@ -5,40 +5,36 @@
   <title>Generate Worship Slides</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link href="{{ url_for('static', filename='style.css') }}" rel="stylesheet">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
   <style>
     body {
-      font-family: 'Inter', sans-serif;
+      font-family: 'Arial', sans-serif;
       background: #f9f9fb;
       padding: 1rem;
       margin: 0;
     }
 
     h1 {
-      color: #2c3e50;
       text-align: center;
-    }
-
-    .section-block {
-      margin: 20px 0;
-      background: #ffffff;
-      padding: 15px;
-      border-radius: 10px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-      transition: transform 0.3s ease;
-    }
-
-    .section-block h3 {
-      margin-top: 0;
-      font-size: 1.2rem;
-      color: #1a1a1a;
+      color: #2c3e50;
+      margin-bottom: 20px;
     }
 
     .section-options label {
       display: block;
-      margin-bottom: 10px;
       font-size: 1rem;
+      margin: 10px 0;
+    }
+
+    .section-block {
+      background: #fff;
+      padding: 15px;
+      border-radius: 10px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      margin-top: 15px;
+    }
+
+    .section-block h3 {
+      margin-top: 0;
     }
 
     input[type="text"] {
@@ -50,35 +46,58 @@
       border-radius: 6px;
     }
 
+    .suggestions {
+      position: relative;
+    }
+
+    .suggestion-list {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: white;
+      border: 1px solid #ccc;
+      border-top: none;
+      z-index: 10;
+      max-height: 150px;
+      overflow-y: auto;
+    }
+
+    .suggestion-item {
+      padding: 8px;
+      cursor: pointer;
+    }
+
+    .suggestion-item:hover {
+      background: #f2f2f2;
+    }
+
     .song-list {
       list-style: none;
       padding: 0;
-      margin: 0;
     }
 
     .song-list li {
       background: #eaecef;
-      margin-bottom: 8px;
+      margin: 6px 0;
       padding: 8px 12px;
       border-radius: 6px;
       font-size: 0.95rem;
-      cursor: grab;
     }
 
     .generate-btn {
       width: 100%;
       padding: 15px;
       font-size: 1.1rem;
-      background: #3b5f7a;
+      background: #34495e;
       color: white;
       border: none;
       border-radius: 8px;
       margin-top: 20px;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
     }
 
     .generate-btn:hover {
-      background: #2c4960;
+      background: #2c3e50;
     }
 
     .back-button {
@@ -94,29 +113,13 @@
       font-size: 1em;
       cursor: pointer;
       z-index: 999;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
-    }
-
-    footer {
-      text-align: center;
-      margin-top: 2rem;
-      color: #777;
-    }
-
-    .fade-in {
-      animation: fadeIn 0.5s ease-in;
-    }
-
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(10px); }
-      to { opacity: 1; transform: translateY(0); }
     }
   </style>
 </head>
 <body>
-  <h1 class="fade-in">Generate Worship Slides</h1>
+  <h1>Generate Worship Slides</h1>
 
-  <form id="generateForm" class="fade-in">
+  <form id="generateForm">
     <div class="section-options">
       <label><input type="checkbox" name="section" value="Praise and Worship"> Praise and Worship</label>
       <label><input type="checkbox" name="section" value="Opening Hymn"> Opening Hymn</label>
@@ -134,10 +137,6 @@
 
   <a href="/" class="back-button">🏠 Back to Home</a>
 
-  <footer>
-    <p>🎶 SlideAndSeek | Made for Worship Teams</p>
-  </footer>
-
   <script>
     const allSongs = {{ all_songs | tojson }};
     const selectedContainer = document.getElementById("selected-sections");
@@ -153,44 +152,67 @@
       const checked = document.querySelectorAll('input[type=checkbox]:checked');
 
       checked.forEach(cb => {
+        const sectionName = cb.value;
         const wrapper = document.createElement("div");
-        wrapper.className = "section-block fade-in";
-        wrapper.dataset.section = cb.value;
+        wrapper.className = "section-block";
 
         const h3 = document.createElement("h3");
-        h3.textContent = cb.value;
+        h3.textContent = sectionName;
+
+        const inputWrap = document.createElement("div");
+        inputWrap.className = "suggestions";
 
         const input = document.createElement("input");
         input.type = "text";
-        input.placeholder = "Type to add a song…";
-        input.dataset.section = cb.value;
+        input.placeholder = "Search and add a song...";
+        input.autocomplete = "off";
 
-        const list = document.createElement("ul");
-        list.className = "song-list";
-        list.id = "songs-" + cb.value.replace(/\s+/g, '-');
+        const suggestionList = document.createElement("div");
+        suggestionList.className = "suggestion-list";
+        suggestionList.style.display = "none";
+
+        const songList = document.createElement("ul");
+        songList.className = "song-list";
 
         input.addEventListener("input", () => {
-          const val = input.value.trim().toLowerCase();
-          const match = allSongs.find(song => song.title.toLowerCase() === val);
-          if (match) {
-            const li = document.createElement("li");
-            li.textContent = match.title;
-            list.appendChild(li);
-            input.value = "";
+          const val = input.value.toLowerCase();
+          const matches = allSongs.filter(song =>
+            song.title.toLowerCase().includes(val)
+          );
+
+          suggestionList.innerHTML = "";
+          if (val && matches.length) {
+            matches.forEach(song => {
+              const div = document.createElement("div");
+              div.textContent = song.title;
+              div.className = "suggestion-item";
+              div.addEventListener("click", () => {
+                const li = document.createElement("li");
+                li.textContent = song.title;
+                songList.appendChild(li);
+                input.value = "";
+                suggestionList.style.display = "none";
+              });
+              suggestionList.appendChild(div);
+            });
+            suggestionList.style.display = "block";
+          } else {
+            suggestionList.style.display = "none";
           }
         });
 
+        document.addEventListener("click", e => {
+          if (!inputWrap.contains(e.target)) {
+            suggestionList.style.display = "none";
+          }
+        });
+
+        inputWrap.appendChild(input);
+        inputWrap.appendChild(suggestionList);
         wrapper.appendChild(h3);
-        wrapper.appendChild(input);
-        wrapper.appendChild(list);
+        wrapper.appendChild(inputWrap);
+        wrapper.appendChild(songList);
         selectedContainer.appendChild(wrapper);
-
-        Sortable.create(list, { animation: 150 });
-      });
-
-      Sortable.create(selectedContainer, {
-        animation: 200,
-        handle: ".section-block"
       });
     }
 
@@ -201,7 +223,7 @@
       const sections = [];
 
       blocks.forEach(block => {
-        const section = block.dataset.section;
+        const section = block.querySelector("h3").textContent;
         const songDivs = block.querySelectorAll("li");
         const songs = Array.from(songDivs).map(li => li.textContent.trim());
         if (songs.length) sections.push({ section, songs });
