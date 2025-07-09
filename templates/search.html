@@ -4,83 +4,66 @@
   <meta charset="UTF-8">
   <title>Search Songs</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="{{ url_for('static', filename='style.css') }}" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
   <style>
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
-
     body {
+      margin: 0;
       font-family: 'Inter', sans-serif;
-      background: linear-gradient(to bottom right, #f0f4ff, #e3e9ff);
+      background: linear-gradient(180deg, #f0f4f8 0%, #ffffff 100%);
       min-height: 100vh;
       display: flex;
       flex-direction: column;
     }
 
-    .page {
+    header, footer {
+      text-align: center;
+      padding: 1em;
+      background: #2c3e50;
+      color: white;
+    }
+
+    main {
       flex: 1;
-      padding: 20px;
       display: flex;
       flex-direction: column;
-      justify-content: space-between;
-    }
-
-    header {
-      text-align: center;
-      margin-bottom: 20px;
-      animation: fadeIn 1s ease;
-    }
-
-    header h1 {
-      font-size: 1.8em;
-      color: #2c3e50;
+      align-items: center;
+      padding: 20px 10px;
     }
 
     form {
+      width: 100%;
+      max-width: 500px;
       display: flex;
       flex-direction: column;
       gap: 10px;
-      align-items: stretch;
-      width: 100%;
-      animation: slideUp 0.7s ease;
-    }
-
-    label {
-      font-weight: 600;
-      font-size: 1em;
-      margin-bottom: 4px;
-    }
-
-    .autocomplete-box {
-      position: relative;
     }
 
     input[type="text"] {
       padding: 12px;
-      font-size: 1em;
-      border: 2px solid #ccc;
-      border-radius: 10px;
+      font-size: 1rem;
+      border-radius: 6px;
+      border: 1px solid #ccc;
       width: 100%;
-      background-color: #fff;
     }
 
     input[type="submit"] {
-      margin-top: 12px;
       padding: 12px;
-      font-size: 1em;
-      background: #3f51b5;
+      font-size: 1rem;
+      background: #2c3e50;
       color: white;
       border: none;
-      border-radius: 10px;
+      border-radius: 6px;
       cursor: pointer;
       transition: background 0.3s ease;
     }
 
     input[type="submit"]:hover {
-      background: #2c3e90;
+      background: #1a252f;
+    }
+
+    .autocomplete-box {
+      position: relative;
     }
 
     .autocomplete-list {
@@ -90,129 +73,91 @@
       right: 0;
       background: white;
       border: 1px solid #ccc;
-      border-top: none;
       z-index: 9999;
       max-height: 150px;
       overflow-y: auto;
-      border-radius: 0 0 10px 10px;
     }
 
     .autocomplete-list div {
-      padding: 10px;
+      padding: 8px;
       cursor: pointer;
-      transition: background 0.2s ease;
     }
 
     .autocomplete-list div:hover {
-      background-color: #f0f0f0;
-    }
-
-    h2 {
-      font-size: 1.2em;
-      color: #3f51b5;
-      margin: 20px 0 10px;
+      background-color: #eee;
     }
 
     .result-block {
+      text-align: left;
       background: #ffffff;
       padding: 15px;
-      margin: 10px 0;
+      margin: 10px auto;
       border-radius: 10px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.08);
-      animation: fadeIn 0.5s ease;
+      max-width: 90%;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
     }
 
     .result-block pre {
       white-space: pre-wrap;
       font-size: 1em;
       line-height: 1.4;
-      margin-top: 8px;
-    }
-
-    .no-results {
-      text-align: center;
-      color: #b00020;
-      font-weight: bold;
-      margin-top: 20px;
-      animation: fadeIn 0.5s ease;
-    }
-
-    footer {
-      text-align: center;
-      margin-top: 30px;
-      font-size: 0.9em;
-      color: #555;
+      margin-top: 10px;
     }
 
     .back-button {
       position: fixed;
-      bottom: 20px;
+      bottom: 10px;
       left: 50%;
       transform: translateX(-50%);
       background: #2c3e50;
       color: white;
-      padding: 14px 24px;
+      padding: 12px 20px;
       border: none;
-      border-radius: 12px;
+      border-radius: 8px;
       font-size: 1em;
       cursor: pointer;
       z-index: 999;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.25);
-      transition: background 0.3s ease;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
     }
 
     .back-button:hover {
       background: #1a252f;
     }
-
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(20px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    @keyframes slideUp {
-      from { opacity: 0; transform: translateY(30px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
   </style>
 </head>
 <body>
-  <div class="page">
-    <header>
-      <h1>Search Songs</h1>
-    </header>
+  <header>
+    <h1>Search Songs</h1>
+  </header>
 
-    <main>
-      <form method="GET" id="search-form" autocomplete="off">
-        <label for="query">Search by title, key, or lyrics:</label>
-        <div class="autocomplete-box">
-          <input type="text" id="query" name="query" placeholder="Type to search..." required>
-          <div id="autocomplete-list" class="autocomplete-list"></div>
+  <main>
+    <form method="POST" id="search-form" autocomplete="off">
+      <label for="query">Search by title, key, or lyrics:</label>
+      <div class="autocomplete-box">
+        <input type="text" id="query" name="query" value="{{ query }}" required>
+        <div id="autocomplete-list" class="autocomplete-list"></div>
+      </div>
+      <input type="submit" value="Search">
+    </form>
+
+    {% if results %}
+      <h2>Results</h2>
+      {% for song in results %}
+        <div class="result-block">
+          <strong>{{ song[0] }}</strong> (Key: {{ song[2] }})
+          <pre>{{ song[1] }}</pre>
         </div>
-        <input type="submit" value="Search">
-      </form>
+      {% endfor %}
+    {% elif searched %}
+      <p><em>No results found for "{{ query }}"</em></p>
+    {% endif %}
+  </main>
 
-      {% if results is not none %}
-        {% if results %}
-          <h2>Results</h2>
-          {% for song in results %}
-            <div class="result-block">
-              <strong>{{ song[1] }}</strong> (Key: {{ song[2] }})
-              <pre>{{ song[3] }}</pre>
-            </div>
-          {% endfor %}
-        {% else %}
-          <div class="no-results">No songs found.</div>
-        {% endif %}
-      {% endif %}
-    </main>
+  <footer>
+    <p>🎶 SlideAndSeek | Find Your Song</p>
+  </footer>
 
-    <footer>
-      <p>🎶 SlideAndSeek | Find Your Song</p>
-    </footer>
-
-    <a href="/" class="back-button">🏠 Back to Home</a>
-  </div>
+  <a href="/" class="back-button">🏠 Back to Home</a>
 
   <script>
     const songTitles = {{ all_songs | tojson }};
@@ -220,7 +165,7 @@
     const autocompleteList = document.getElementById("autocomplete-list");
     const searchForm = document.getElementById("search-form");
 
-    queryInput.addEventListener("input", function () {
+    queryInput.addEventListener("input", function() {
       const val = this.value.toLowerCase();
       autocompleteList.innerHTML = "";
 
@@ -233,7 +178,7 @@
           optionDiv.onclick = () => {
             queryInput.value = song.title;
             autocompleteList.innerHTML = "";
-            searchForm.submit();  // auto-submit when selected
+            searchForm.submit(); // Auto-submit the form
           };
           autocompleteList.appendChild(optionDiv);
         }
