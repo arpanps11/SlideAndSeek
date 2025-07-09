@@ -1,91 +1,135 @@
-from flask import Flask, render_template, request, send_file, redirect, url_for
-from datetime import datetime
+
+from flask import Flask, render_template, request, redirect, url_for, send_file
+import sqlite3
 from pptx import Presentation
 from pptx.util import Inches, Pt
-import io
-import json
-import os
+from io import BytesIO
+from datetime import datetime
 
 app = Flask(__name__)
 
-DATA_FILE = "songs.json"
+def init_db():
+    conn = sqlite3.connect('songs.db')
+    c = conn.cursor()
+    c.execute('''CREATE TABLE IF NOT EXISTS songs (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    title TEXT NOT NULL,
+                    lyrics TEXT NOT NULL,
+                    key TEXT,
+                    song_number TEXT,
+                    page_number TEXT
+                )''')
+    conn.commit()
+    conn.close()
 
-# Load song data
-if os.path.exists(DATA_FILE):
-    with open(DATA_FILE, "r", encoding="utf-8") as f:
-        song_data = json.load(f)
-else:
-    song_data = []
-
-@app.route("/")
+@app.route('/')
 def home():
-    return render_template("home.html")
+    return render_template('home.html')
 
-@app.route("/add", methods=["GET", "POST"])
-def add_song():
-    if request.method == "POST":
-        title = request.form["title"].strip()
-        key = request.form["key"].strip()
-        lyrics = request.form["lyrics"].strip()
-        new_song = {"title": title, "key": key, "lyrics": lyrics}
-        song_data.append(new_song)
-        with open(DATA_FILE, "w", encoding="utf-8") as f:
-            json.dump(song_data, f, indent=2)
-        return redirect(url_for("home"))
-    return render_template("add_song.html")
+@app.route('/add', methods=['GET', 'POST'])
+def add():
+    if request.method == 'POST':
+        title = request.form['title']
+        lyrics = request.form['lyrics']
+        key = request.form['key']
+        song_number = request.form.get('song_number')
+        page_number = request.form.get('page_number')
+        conn = sqlite3.connect('songs.db')
+        c = conn.cursor()
+        c.execute("INSERT INTO songs (title, lyrics, key, song_number, page_number) VALUES (?, ?, ?, ?, ?)",
+                  (title, lyrics, key, song_number, page_number))
+        conn.commit()
+        conn.close()
+        return redirect(url_for('home'))
+    return render_template('add.html')
 
-@app.route("/search", methods=["GET", "POST"])
+@app.route('/search')
 def search():
-    query = ""
-    results = []
-    all_songs = song_data
-    if request.method == "POST":
-        query = request.form["query"].lower()
-        results = [
-            song for song in song_data
-            if query in song["title"].lower()
-            or query in song["key"].lower()
-            or query in song["lyrics"].lower()
-        ]
-    return render_template("search.html", results=results, all_songs=all_songs)
+    query = request.args.get('query', '')
+    conn = sqlite3.connect('songs.db')
+    c = conn.cursor()
+    c.execute("SELECT title, key, lyrics FROM songs WHERE title LIKE ? OR lyrics LIKE ?", (f'%{query}%', f'%{query}%'))
+    results = c.fetchall()
+    conn.close()
+    return render_template('search.html', results=results, query=query)
 
-@app.route("/generate", methods=["GET", "POST"])
+@app.route('/generate', methods=['GET', 'POST'])
 def generate():
-    if request.method == "POST":
-        data = request.json
-        sections = data["sections"]
-        filename = f"{datetime.now().strftime('%Y_%m_%d')}_SlideAndSeek.pptx"
+    conn = sqlite3.connect('songs.db')
+    c = conn.cursor()
+    c.execute("SELECT id, title FROM songs")
+    all_songs = c.fetchall()
 
+    if request.method == 'POST':
+        data = request.form.to_dict(flat=False)
         prs = Presentation()
         blank_slide_layout = prs.slide_layouts[6]
 
-        def add_lyrics_slide(section, title, lyrics):
-            stanzas = [s.strip() for s in lyrics.split("\n\n") if s.strip()]
-            for stanza in stanzas:
-                slide = prs.slides.add_slide(blank_slide_layout)
-                tf = slide.shapes.add_textbox(Inches(1), Inches(1), Inches(8), Inches(5)).text_frame
-                tf.text = f"{section} - {title}"
-                tf.paragraphs[0].font.size = Pt(20)
-                tf.add_paragraph()  # spacing
-                p = tf.add_paragraph()
-                p.text = stanza.replace('\r', '').replace('\n', '\n')
-                p.font.size = Pt(32)
+        section_order = data['sections[]']
+        for section in section_order:
+            songs_in_section = data.get(f'{section}_songs[]', [])
+            if not songs_in_section:
+                continue
 
-        for section_block in sections:
-            section_name = section_block["section"]
-            songs = section_block["songs"]
-            for song_title in songs:
-                match = next((s for s in song_data if s["title"] == song_title), None)
-                if match:
-                    add_lyrics_slide(section_name, match["title"], match["lyrics"])
+            if section in ['Opening Hymn', 'Offertory Hymn', 'Communion Hymn']:
+                c.execute("SELECT title, song_number, page_number, lyrics FROM songs WHERE id = ?", (songs_in_section[0],))
+                song = c.fetchone()
+                if song:
+                    title, number, page, lyrics = song
+                    header_slide = prs.slides.add_slide(blank_slide_layout)
+                    tf = header_slide.shapes.add_textbox(Inches(1), Inches(2), Inches(8), Inches(1.5)).text_frame
+                    header_text = f"{section}
+{title}"
+                    if number:
+                        header_text += f"
+Song No: {number}"
+                    if page:
+                        header_text += f"
+Page No: {page}"
+                    tf.text = header_text
+                    tf.paragraphs[0].font.size = Pt(32)
+                    for stanza in lyrics.strip().split('
 
-        ppt_io = io.BytesIO()
-        prs.save(ppt_io)
-        ppt_io.seek(0)
+'):
+                        slide = prs.slides.add_slide(blank_slide_layout)
+                        text_frame = slide.shapes.add_textbox(Inches(1), Inches(1), Inches(8), Inches(5)).text_frame
+                        for line in stanza.strip().split('
+'):
+                            p = text_frame.add_paragraph()
+                            p.text = line.strip()
+                            p.font.size = Pt(24)
+            else:  # Praise and Worship or others
+                for song_id in songs_in_section:
+                    c.execute("SELECT title, lyrics FROM songs WHERE id = ?", (song_id,))
+                    song = c.fetchone()
+                    if song:
+                        title, lyrics = song
+                        title_slide = prs.slides.add_slide(blank_slide_layout)
+                        tf = title_slide.shapes.add_textbox(Inches(1), Inches(2), Inches(8), Inches(1.5)).text_frame
+                        tf.text = title
+                        tf.paragraphs[0].font.size = Pt(36)
+                        for stanza in lyrics.strip().split('
 
-        return send_file(ppt_io, as_attachment=True, download_name=filename)
+'):
+                            slide = prs.slides.add_slide(blank_slide_layout)
+                            text_frame = slide.shapes.add_textbox(Inches(1), Inches(1), Inches(8), Inches(5)).text_frame
+                            for line in stanza.strip().split('
+'):
+                                p = text_frame.add_paragraph()
+                                p.text = line.strip()
+                                p.font.size = Pt(24)
 
-    return render_template("generate.html", all_songs=song_data)
+        output = BytesIO()
+        date_str = datetime.now().strftime('%Y_%m_%d')
+        filename = f"{date_str}_Sunday_Service_Slides.pptx"
+        prs.save(output)
+        output.seek(0)
+        conn.close()
+        return send_file(output, as_attachment=True, download_name=filename)
 
-if __name__ == "__main__":
+    conn.close()
+    return render_template('generate.html', songs=all_songs)
+
+if __name__ == '__main__':
+    init_db()
     app.run(debug=True)
