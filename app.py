@@ -74,7 +74,7 @@ def search_songs(query):
 
 @app.route('/')
 def home():
-    return render_template("index.html")
+    return render_template("home.html")
 
 @app.route('/search', methods=['GET', 'POST'])
 def search():
