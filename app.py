@@ -25,7 +25,7 @@ def init_db():
 # Home route
 @app.route('/')
 def home():
-    return render_template('index.html')
+    return render_template('home.html')
 
 # Add song route
 @app.route('/add', methods=['GET', 'POST'])
