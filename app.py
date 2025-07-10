@@ -3,7 +3,6 @@ import sqlite3
 import os
 
 app = Flask(__name__)
-
 DATABASE = 'songs.db'
 
 def init_db():
@@ -14,10 +13,10 @@ def init_db():
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 title TEXT UNIQUE,
                 lyrics TEXT,
-                song_number INTEGER,
-                page_number INTEGER,
-                key_root TEXT,
-                key_type TEXT
+                key TEXT,
+                key_type TEXT,
+                song_number TEXT,
+                page_number TEXT
             )
         ''')
         conn.commit()
@@ -32,11 +31,7 @@ def search_songs(query):
     with sqlite3.connect(DATABASE) as conn:
         cursor = conn.cursor()
         query = f"%{query}%"
-        cursor.execute("""
-            SELECT title, lyrics, key_root, key_type
-            FROM songs
-            WHERE title LIKE ? OR lyrics LIKE ? OR key_root LIKE ? OR key_type LIKE ?
-        """, (query, query, query, query))
+        cursor.execute("SELECT id, title, lyrics, key, key_type FROM songs WHERE title LIKE ? OR lyrics LIKE ? OR key LIKE ?", (query, query, query))
         return cursor.fetchall()
 
 @app.route('/')
@@ -49,27 +44,61 @@ def add_song():
     if request.method == 'POST':
         title = request.form['title'].strip()
         lyrics = request.form['lyrics'].strip()
-        song_number = request.form.get('song_number')
-        page_number = request.form.get('page_number')
-        key_root = request.form.get('key_root') or None
-        key_type = request.form.get('key_type') or None
+        key = request.form.get('key', '').strip()
+        key_type = request.form.get('key_type', '').strip()
+        song_number = request.form.get('song_number', '').strip()
+        page_number = request.form.get('page_number', '').strip()
 
         if not title or not lyrics:
-            message = 'Song Title and Lyrics are required.'
+            message = 'Title and lyrics are required.'
         else:
             try:
                 with sqlite3.connect(DATABASE) as conn:
                     cursor = conn.cursor()
-                    cursor.execute("""
-                        INSERT INTO songs (title, lyrics, song_number, page_number, key_root, key_type)
+                    cursor.execute('''
+                        INSERT INTO songs (title, lyrics, key, key_type, song_number, page_number)
                         VALUES (?, ?, ?, ?, ?, ?)
-                    """, (title, lyrics, song_number or None, page_number or None, key_root, key_type))
+                    ''', (title, lyrics, key, key_type, song_number, page_number))
                     conn.commit()
                 message = 'Song added successfully!'
             except sqlite3.IntegrityError:
                 message = 'A song with this title already exists.'
 
     return render_template('add.html', message=message)
+
+@app.route('/edit/<int:song_id>', methods=['GET', 'POST'])
+def edit_song(song_id):
+    with sqlite3.connect(DATABASE) as conn:
+        cursor = conn.cursor()
+
+        if request.method == 'POST':
+            title = request.form['title'].strip()
+            lyrics = request.form['lyrics'].strip()
+            key = request.form.get('key', '').strip()
+            key_type = request.form.get('key_type', '').strip()
+            song_number = request.form.get('song_number', '').strip()
+            page_number = request.form.get('page_number', '').strip()
+
+            if not title or not lyrics:
+                message = 'Title and lyrics are required.'
+            else:
+                try:
+                    cursor.execute('''
+                        UPDATE songs
+                        SET title = ?, lyrics = ?, key = ?, key_type = ?, song_number = ?, page_number = ?
+                        WHERE id = ?
+                    ''', (title, lyrics, key, key_type, song_number, page_number, song_id))
+                    conn.commit()
+                    return redirect(url_for('search'))
+                except sqlite3.IntegrityError:
+                    message = 'A song with this title already exists.'
+        else:
+            cursor.execute("SELECT * FROM songs WHERE id = ?", (song_id,))
+            song = cursor.fetchone()
+            if not song:
+                return "Song not found", 404
+
+            return render_template('edit.html', song=song)
 
 @app.route('/search', methods=['GET', 'POST'])
 def search():

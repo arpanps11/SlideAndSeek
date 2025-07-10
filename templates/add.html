@@ -1,12 +1,16 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Add New Song</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link href="{{ url_for('static', filename='style.css') }}" rel="stylesheet">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link href="{{ url_for('static', filename='style.css') }}" rel="stylesheet" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
   <style>
+    * {
+      box-sizing: border-box;
+    }
+
     body {
       margin: 0;
       font-family: 'Inter', sans-serif;
@@ -14,6 +18,7 @@
       min-height: 100vh;
       display: flex;
       flex-direction: column;
+      overflow-x: hidden;
     }
 
     header, footer {
@@ -28,16 +33,16 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding: 20px;
+      padding: 20px 10px;
     }
 
     form {
-      width: 100%;
-      max-width: 600px;
-      background: #fff;
-      padding: 25px;
+      background: #ffffff;
+      padding: 20px;
       border-radius: 10px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+      width: 100%;
+      max-width: 500px;
       display: flex;
       flex-direction: column;
       gap: 15px;
@@ -45,6 +50,7 @@
 
     label {
       font-weight: 600;
+      margin-bottom: 5px;
     }
 
     input[type="text"],
@@ -60,54 +66,74 @@
 
     textarea {
       resize: vertical;
+      min-height: 120px;
+    }
+
+    .key-group {
+      display: flex;
+      gap: 10px;
+    }
+
+    .key-group select {
+      flex: 1;
     }
 
     input[type="submit"] {
+      padding: 12px;
+      font-size: 1rem;
       background: #2c3e50;
       color: white;
       border: none;
-      padding: 12px;
-      font-size: 1rem;
-      border-radius: 8px;
+      border-radius: 6px;
       cursor: pointer;
+      transition: background 0.3s ease;
     }
 
     input[type="submit"]:hover {
       background: #1a252f;
     }
 
-    .flex-row {
-      display: flex;
-      gap: 10px;
+    .message {
+      text-align: center;
+      margin-top: 10px;
+      color: green;
+      font-weight: bold;
     }
 
-    .flex-row > div {
-      flex: 1;
-    }
-
-    .home-button {
-      display: inline-block;
-      margin: 20px auto 0;
+    .back-button {
+      position: fixed;
+      bottom: 10px;
+      left: 50%;
+      transform: translateX(-50%);
       background: #2c3e50;
       color: white;
-      padding: 10px 16px;
+      padding: 12px 20px;
+      border: none;
       border-radius: 8px;
+      font-size: 1em;
+      cursor: pointer;
+      z-index: 999;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
       text-decoration: none;
-      font-weight: 500;
-      font-size: 1rem;
-      transition: background 0.3s ease;
-      text-align: center;
     }
 
-    .home-button:hover {
+    .back-button:hover {
       background: #1a252f;
     }
 
-    .message {
-      text-align: center;
-      font-weight: 600;
-      color: green;
-      margin-top: 10px;
+    @media (max-width: 480px) {
+      form {
+        padding: 15px;
+      }
+
+      .key-group {
+        flex-direction: column;
+      }
+
+      .back-button {
+        font-size: 0.9em;
+        padding: 10px 16px;
+      }
     }
   </style>
 </head>
@@ -117,64 +143,54 @@
   </header>
 
   <main>
+    {% if message %}
+      <p class="message">{{ message }}</p>
+    {% endif %}
     <form method="POST">
-      {% if message %}
-        <div class="message">{{ message }}</div>
-      {% endif %}
-
       <label for="title">Song Title *</label>
       <input type="text" id="title" name="title" required>
 
-      <div class="flex-row">
-        <div>
-          <label for="song_number">Song Number</label>
-          <input type="number" id="song_number" name="song_number" maxlength="3">
-        </div>
-        <div>
-          <label for="page_number">Page Number</label>
-          <input type="number" id="page_number" name="page_number" maxlength="3">
-        </div>
-      </div>
-
-      <div class="flex-row">
-        <div>
-          <label for="key_root">Key</label>
-          <select id="key_root" name="key_root">
-            <option value="">-- Select Key --</option>
-            {% for note in ['A', 'A#', 'B', 'C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#'] %}
-              <option value="{{ note }}">{{ note }}</option>
-            {% endfor %}
-          </select>
-        </div>
-        <div>
-          <label for="key_type">Type</label>
-          <select id="key_type" name="key_type" disabled>
-            <option value="">-- Select Type --</option>
-            <option value="Major">Major</option>
-            <option value="Minor">Minor</option>
-          </select>
-        </div>
-      </div>
-
       <label for="lyrics">Lyrics *</label>
-      <textarea id="lyrics" name="lyrics" rows="8" required></textarea>
+      <textarea id="lyrics" name="lyrics" required></textarea>
+
+      <label for="song_number">Song Number (optional)</label>
+      <input type="number" id="song_number" name="song_number" max="999">
+
+      <label for="page_number">Page Number (optional)</label>
+      <input type="number" id="page_number" name="page_number" max="999">
+
+      <label>Key (optional)</label>
+      <div class="key-group">
+        <select id="key_root" name="key_root">
+          <option value="">-- Select Key --</option>
+          <option>A</option><option>A#</option><option>B</option><option>C</option>
+          <option>C#</option><option>D</option><option>D#</option><option>E</option>
+          <option>F</option><option>F#</option><option>G</option><option>G#</option>
+        </select>
+
+        <select id="key_type" name="key_type" disabled>
+          <option value="">-- Type --</option>
+          <option value="Major">Major</option>
+          <option value="Minor">Minor</option>
+        </select>
+      </div>
 
       <input type="submit" value="Save Song">
     </form>
-
-    <a href="/" class="home-button">🏠 Home</a>
   </main>
 
   <footer>
     <p>🎶 SlideAndSeek | Worship with Ease</p>
   </footer>
 
-  <script>
-    const keyRoot = document.getElementById('key_root');
-    const keyType = document.getElementById('key_type');
+  <a href="/" class="back-button">🏠 Home</a>
 
-    keyRoot.addEventListener('change', function () {
-      keyType.disabled = (this.value === '');
+  <script>
+    const keyRootSelect = document.getElementById('key_root');
+    const keyTypeSelect = document.getElementById('key_type');
+
+    keyRootSelect.addEventListener('change', function () {
+      keyTypeSelect.disabled = !this.value;
     });
   </script>
 </body>

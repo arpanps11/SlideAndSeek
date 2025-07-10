@@ -104,6 +104,21 @@
       margin-top: 10px;
     }
 
+    .edit-button {
+      display: inline-block;
+      margin-top: 10px;
+      background: #3498db;
+      color: white;
+      padding: 8px 12px;
+      border-radius: 6px;
+      text-decoration: none;
+      transition: background 0.3s ease;
+    }
+
+    .edit-button:hover {
+      background: #217dbb;
+    }
+
     .home-button {
       display: inline-block;
       margin: 20px auto;
@@ -142,11 +157,12 @@
       <h2>Results</h2>
       {% for song in results %}
         <div class="result-block">
-          <strong>{{ song[0] }}</strong>
-          {% if song[2] %}
-            (Key: {{ song[2] }}{% if song[3] %} {{ song[3] }}{% endif %})
+          <strong>{{ song[1] }}</strong>
+          {% if song[3] %}
+            (Key: {{ song[3] }}{% if song[4] %} {{ song[4] }}{% endif %})
           {% endif %}
-          <pre>{{ song[1] }}</pre>
+          <pre>{{ song[2] }}</pre>
+          <a href="{{ url_for('edit_song', song_id=song[0]) }}" class="edit-button">✏️ Edit</a>
         </div>
       {% endfor %}
     {% elif searched %}
