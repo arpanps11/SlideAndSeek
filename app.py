@@ -39,6 +39,7 @@ def search_songs(query):
         """, (query, query, query, query))
         return cursor.fetchall()
 
+
 @app.route('/')
 def home():
     return render_template('home.html')
@@ -79,11 +80,12 @@ def search():
 
     if request.method == 'POST':
         query = request.form['query'].strip()
-        results = search_songs(query)
         searched = True
+        results = search_songs(query)
 
     all_songs = get_all_songs()
     return render_template('search.html', results=results, query=query, searched=searched, all_songs=all_songs)
+
 
 @app.route('/edit/<int:song_id>', methods=['GET', 'POST'])
 def edit_song(song_id):
