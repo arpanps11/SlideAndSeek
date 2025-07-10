@@ -83,7 +83,6 @@ def edit_song(song_id):
         return "Song not found", 404
 
     error = None
-    success = None
 
     if request.method == 'POST':
         title = request.form.get('title', '').strip()
@@ -107,11 +106,11 @@ def edit_song(song_id):
                     WHERE id = ?
                 """, (title, lyrics, song_number, page_number, key_root, key_type, song_id))
                 conn.commit()
-                success = "Song updated successfully."
-                cursor.execute("SELECT * FROM songs WHERE id = ?", (song_id,))
-                song = cursor.fetchone()
+                conn.close()
+                return redirect(url_for('search', query=title))
+
     conn.close()
-    return render_template('edit.html', song=song, error=error, success=success)
+    return render_template('edit.html', song=song, error=error)
 
 @app.route('/search', methods=['GET', 'POST'])
 def search():
@@ -127,6 +126,12 @@ def search():
     if request.method == 'POST':
         query = request.form.get('query', '').strip().lower()
         searched = True
+    elif request.method == 'GET':
+        query = request.args.get('query', '').strip().lower()
+        if query:
+            searched = True
+
+    if searched:
         cursor.execute("""
             SELECT title, lyrics, key_root, key_type, song_number, id FROM songs
             WHERE LOWER(title) LIKE ? 
@@ -134,6 +139,7 @@ def search():
                OR LOWER(key_root || ' ' || IFNULL(key_type, '')) LIKE ?
         """, (f'%{query}%', f'%{query}%', f'%{query}%'))
         results = cursor.fetchall()
+
     conn.close()
     return render_template('search.html', results=results, searched=searched, query=query, all_songs=all_songs)
 
