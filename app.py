@@ -7,50 +7,67 @@ app.secret_key = 'your_secret_key'
 DATABASE = 'songs.db'
 SONG_EDIT_PASSWORD = "ebccni@2025"
 
+# Home route
 @app.route('/')
 def home():
     return render_template('home.html')
 
+# Add song route
 @app.route('/add', methods=['GET', 'POST'])
 def add_song():
     if not session.get('authenticated'):
         return redirect(url_for('verify', next='/add'))
 
     message = None
+    error = None
+
     if request.method == 'POST':
-        title = request.form['title'].strip()
-        lyrics = request.form['lyrics'].strip()
-        key_root = request.form['key_root'].strip() or None
-        key_type = request.form['key_type'].strip() or None
-        song_number = request.form['song_number'].strip() or None
-        page_number = request.form['page_number'].strip() or None
+        try:
+            title = request.form['title'].strip()
+            lyrics = request.form['lyrics'].strip()
+            key_root = request.form['key_root'].strip() or None
+            key_type = request.form['key_type'].strip() or None
+            song_number = request.form['song_number'].strip() or None
+            page_number = request.form['page_number'].strip() or None
 
-        with sqlite3.connect(DATABASE) as conn:
-            cursor = conn.cursor()
-            cursor.execute("INSERT INTO songs (title, lyrics, key_root, key_type, song_number, page_number) VALUES (?, ?, ?, ?, ?, ?)",
-                           (title, lyrics, key_root, key_type, song_number, page_number))
-            conn.commit()
-        message = "Song added successfully!"
+            with sqlite3.connect(DATABASE) as conn:
+                cursor = conn.cursor()
+                cursor.execute("SELECT COUNT(*) FROM songs WHERE title = ?", (title,))
+                if cursor.fetchone()[0] > 0:
+                    error = "A song with this title already exists."
+                else:
+                    cursor.execute("""
+                        INSERT INTO songs (title, lyrics, key_root, key_type, song_number, page_number)
+                        VALUES (?, ?, ?, ?, ?, ?)
+                    """, (title, lyrics, key_root, key_type, song_number, page_number))
+                    conn.commit()
+                    message = "Song added successfully!"
+        except Exception as e:
+            error = "An error occurred while adding the song."
 
-    return render_template('add.html', message=message)
+    return render_template('add.html', message=message, error=error)
 
+# Search function
 def search_songs(query):
+    query = query.strip()
     with sqlite3.connect(DATABASE) as conn:
         cursor = conn.cursor()
-        query = f"%{query}%"
+        like_query = f"%{query}%"
         cursor.execute("""
             SELECT title, lyrics, key_root, key_type, song_number, id
             FROM songs
             WHERE title LIKE ? OR lyrics LIKE ? OR key_root LIKE ? OR key_type LIKE ?
-        """, (query, query, query, query))
+        """, (like_query, like_query, like_query, like_query))
         return cursor.fetchall()
 
+# Autocomplete titles
 def get_all_titles():
     with sqlite3.connect(DATABASE) as conn:
         cursor = conn.cursor()
         cursor.execute("SELECT title FROM songs")
         return [{'title': row[0]} for row in cursor.fetchall()]
 
+# Search page
 @app.route('/search', methods=['GET', 'POST'])
 def search():
     query = ''
@@ -63,9 +80,9 @@ def search():
         searched = True
 
     all_songs = get_all_titles()
-    authenticated = session.get('authenticated', False)
-    return render_template('search.html', query=query, results=results, searched=searched, all_songs=all_songs, authenticated=authenticated)
+    return render_template('search.html', query=query, results=results, searched=searched, all_songs=all_songs)
 
+# Edit song
 @app.route('/edit/<int:song_id>', methods=['GET', 'POST'])
 def edit_song(song_id):
     if not session.get('authenticated'):
@@ -75,20 +92,23 @@ def edit_song(song_id):
         cursor = conn.cursor()
 
         if request.method == 'POST':
-            title = request.form['title'].strip()
-            lyrics = request.form['lyrics'].strip()
-            key_root = request.form['key_root'].strip() or None
-            key_type = request.form['key_type'].strip() or None
-            song_number = request.form['song_number'].strip() or None
-            page_number = request.form['page_number'].strip() or None
+            try:
+                title = request.form['title'].strip()
+                lyrics = request.form['lyrics'].strip()
+                key_root = request.form['key_root'].strip() or None
+                key_type = request.form['key_type'].strip() or None
+                song_number = request.form['song_number'].strip() or None
+                page_number = request.form['page_number'].strip() or None
 
-            cursor.execute("""
-                UPDATE songs
-                SET title = ?, lyrics = ?, key_root = ?, key_type = ?, song_number = ?, page_number = ?
-                WHERE id = ?
-            """, (title, lyrics, key_root, key_type, song_number, page_number, song_id))
-            conn.commit()
-            return redirect('/search')
+                cursor.execute("""
+                    UPDATE songs
+                    SET title = ?, lyrics = ?, key_root = ?, key_type = ?, song_number = ?, page_number = ?
+                    WHERE id = ?
+                """, (title, lyrics, key_root, key_type, song_number, page_number, song_id))
+                conn.commit()
+                return redirect('/search')
+            except Exception as e:
+                return "Something went wrong while updating.", 400
 
         cursor.execute("""
             SELECT title, lyrics, key_root, key_type, song_number, page_number
@@ -99,6 +119,7 @@ def edit_song(song_id):
 
     return render_template('edit.html', song=song, song_id=song_id)
 
+# Password verification
 @app.route('/verify', methods=['GET', 'POST'])
 def verify():
     next_page = request.args.get('next', '/')
@@ -114,6 +135,7 @@ def verify():
 
     return render_template('verify.html', next_page=next_page, error=error)
 
+# Generate route (optional)
 @app.route('/generate')
 def generate():
     return "Coming soon"

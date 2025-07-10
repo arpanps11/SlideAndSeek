@@ -104,21 +104,6 @@
       margin-top: 10px;
     }
 
-    .edit-button {
-      display: inline-block;
-      margin-top: 10px;
-      background: #3498db;
-      color: white;
-      padding: 8px 12px;
-      border-radius: 6px;
-      text-decoration: none;
-      transition: background 0.3s ease;
-    }
-
-    .edit-button:hover {
-      background: #217dbb;
-    }
-
     .home-button {
       display: inline-block;
       margin: 20px auto;
@@ -135,27 +120,6 @@
 
     .home-button:hover {
       background: #1a252f;
-    }
-
-    .no-results {
-      margin-top: 20px;
-      text-align: center;
-    }
-
-    .add-suggestion {
-      display: inline-block;
-      margin-top: 10px;
-      background: #27ae60;
-      color: white;
-      padding: 10px 16px;
-      border-radius: 8px;
-      text-decoration: none;
-      font-weight: 500;
-      transition: background 0.3s ease;
-    }
-
-    .add-suggestion:hover {
-      background: #1e8449;
     }
   </style>
 </head>
@@ -188,10 +152,7 @@
           </div>
         {% endfor %}
       {% else %}
-        <div class="no-results">
-          <p><em>No results found for "{{ query }}"</em></p>
-          <a href="{{ url_for('verify', next='/add') }}" class="add-suggestion">➕ Add New Song</a>
-        </div>
+        <p><em>No results found for "{{ query }}"</em></p>
       {% endif %}
     {% endif %}
 
@@ -208,8 +169,8 @@
     const autocompleteList = document.getElementById("autocomplete-list");
     const searchForm = document.getElementById("search-form");
 
-    queryInput.addEventListener("input", function() {
-      const val = this.value.toLowerCase();
+    queryInput.addEventListener("input", function () {
+      const val = this.value.toLowerCase().trim();
       autocompleteList.innerHTML = "";
 
       if (!val) return;
