@@ -153,22 +153,22 @@
       <input type="submit" value="Search">
     </form>
 
-    {% if results %}
-      <h2>Results</h2>
-      {% for song in results %}
-       <!-- Inside your existing {% for song in results %} loop -->
-<div class="result-block">
-  <strong>{{ song[0] }}</strong>
-  {% if song[2] %}
-    (Key: {{ song[2] }}{% if song[3] %} {{ song[3] }}{% endif %})
-  {% endif %}
-  <pre>{{ song[1] }}</pre>
-  <a href="{{ url_for('edit_song', song_id=song[5]) }}" class="home-button" style="margin-top: 10px; display: inline-block;">✏️ Edit</a>
-</div>
-
-      {% endfor %}
-    {% elif searched %}
-      <p><em>No results found for "{{ query }}"</em></p>
+    {% if searched %}
+      {% if results %}
+        <h2>Results</h2>
+        {% for song in results %}
+          <div class="result-block">
+            <strong>{{ song[0] }}</strong>
+            {% if song[2] %}
+              (Key: {{ song[2] }}{% if song[3] %} {{ song[3] }}{% endif %})
+            {% endif %}
+            <pre>{{ song[1] }}</pre>
+            <a href="{{ url_for('edit_song', song_id=song[5]) }}" class="home-button" style="margin-top: 10px; display: inline-block;">✏️ Edit</a>
+          </div>
+        {% endfor %}
+      {% else %}
+        <p><em>No results found for "{{ query }}"</em></p>
+      {% endif %}
     {% endif %}
 
     <a href="/" class="home-button">🏠 Home</a>
@@ -197,7 +197,7 @@
           optionDiv.onclick = () => {
             queryInput.value = song.title;
             autocompleteList.innerHTML = "";
-            searchForm.submit(); // Auto-submit the form
+            searchForm.submit();
           };
           autocompleteList.appendChild(optionDiv);
         }
