@@ -26,18 +26,18 @@
     main {
       flex: 1;
       display: flex;
-      justify-content: center;
-      align-items: flex-start;
-      padding: 40px 20px;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
     }
 
     form {
-      background: white;
-      padding: 30px;
-      border-radius: 12px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
       width: 100%;
       max-width: 600px;
+      background: #fff;
+      padding: 25px;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
       display: flex;
       flex-direction: column;
       gap: 15px;
@@ -47,69 +47,67 @@
       font-weight: 600;
     }
 
-    input[type="text"], textarea, select {
-      padding: 12px;
+    input[type="text"],
+    input[type="number"],
+    select,
+    textarea {
+      padding: 10px;
       font-size: 1rem;
       border-radius: 6px;
       border: 1px solid #ccc;
       width: 100%;
-      box-sizing: border-box;
     }
 
     textarea {
       resize: vertical;
-      min-height: 120px;
     }
 
     input[type="submit"] {
-      padding: 12px;
-      font-size: 1rem;
       background: #2c3e50;
       color: white;
       border: none;
-      border-radius: 6px;
+      padding: 12px;
+      font-size: 1rem;
+      border-radius: 8px;
       cursor: pointer;
-      transition: background 0.3s ease;
     }
 
     input[type="submit"]:hover {
       background: #1a252f;
     }
 
-    .row {
+    .flex-row {
       display: flex;
       gap: 10px;
-      flex-wrap: wrap;
     }
 
-    .row > div {
+    .flex-row > div {
       flex: 1;
-      min-width: 120px;
     }
 
-    .back-button {
-      position: fixed;
-      bottom: 10px;
-      left: 50%;
-      transform: translateX(-50%);
+    .home-button {
+      display: inline-block;
+      margin: 20px auto 0;
       background: #2c3e50;
       color: white;
-      padding: 12px 20px;
-      border: none;
+      padding: 10px 16px;
       border-radius: 8px;
-      font-size: 1em;
-      cursor: pointer;
-      z-index: 999;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+      text-decoration: none;
+      font-weight: 500;
+      font-size: 1rem;
+      transition: background 0.3s ease;
+      text-align: center;
     }
 
-    .back-button:hover {
+    .home-button:hover {
       background: #1a252f;
     }
 
-    select:disabled {
-      background-color: #f0f0f0;
-      color: #888;
+    .message {
+      text-align: center;
+      font-weight: 600;
+      color: green;
+      margin-top: 10px;
     }
   </style>
 </head>
@@ -120,61 +118,63 @@
 
   <main>
     <form method="POST">
+      {% if message %}
+        <div class="message">{{ message }}</div>
+      {% endif %}
+
       <label for="title">Song Title *</label>
       <input type="text" id="title" name="title" required>
 
-      <label for="lyrics">Lyrics *</label>
-      <textarea id="lyrics" name="lyrics" required></textarea>
-
-      <div class="row">
+      <div class="flex-row">
         <div>
           <label for="song_number">Song Number</label>
-          <input type="text" id="song_number" name="song_number" maxlength="3" pattern="\d{1,3}" inputmode="numeric">
+          <input type="number" id="song_number" name="song_number" maxlength="3">
         </div>
         <div>
           <label for="page_number">Page Number</label>
-          <input type="text" id="page_number" name="page_number" maxlength="3" pattern="\d{1,3}" inputmode="numeric">
+          <input type="number" id="page_number" name="page_number" maxlength="3">
         </div>
       </div>
 
-      <div class="row">
+      <div class="flex-row">
         <div>
-          <label for="key">Key</label>
-          <select name="key_root" id="key_root">
-            <option value="">-- Select --</option>
-            <option>A</option><option>A#</option><option>B</option>
-            <option>C</option><option>C#</option><option>D</option>
-            <option>D#</option><option>E</option><option>F</option>
-            <option>F#</option><option>G</option><option>G#</option>
+          <label for="key_root">Key</label>
+          <select id="key_root" name="key_root">
+            <option value="">-- Select Key --</option>
+            {% for note in ['A', 'A#', 'B', 'C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#'] %}
+              <option value="{{ note }}">{{ note }}</option>
+            {% endfor %}
           </select>
         </div>
         <div>
           <label for="key_type">Type</label>
-          <select name="key_type" id="key_type" disabled>
-            <option value="">-- Select --</option>
-            <option>Major</option>
-            <option>Minor</option>
+          <select id="key_type" name="key_type" disabled>
+            <option value="">-- Select Type --</option>
+            <option value="Major">Major</option>
+            <option value="Minor">Minor</option>
           </select>
         </div>
       </div>
 
+      <label for="lyrics">Lyrics *</label>
+      <textarea id="lyrics" name="lyrics" rows="8" required></textarea>
+
       <input type="submit" value="Save Song">
     </form>
+
+    <a href="/" class="home-button">🏠 Home</a>
   </main>
 
   <footer>
     <p>🎶 SlideAndSeek | Worship with Ease</p>
   </footer>
 
-  <a href="/" class="back-button">🏠 Home</a>
-
   <script>
-    // Enable major/minor dropdown when a root note is selected
     const keyRoot = document.getElementById('key_root');
     const keyType = document.getElementById('key_type');
 
     keyRoot.addEventListener('change', function () {
-      keyType.disabled = !this.value;
+      keyType.disabled = (this.value === '');
     });
   </script>
 </body>

@@ -14,9 +14,10 @@ def init_db():
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 title TEXT UNIQUE,
                 lyrics TEXT,
-                key TEXT,
-                song_number TEXT,
-                page_number TEXT
+                song_number INTEGER,
+                page_number INTEGER,
+                key_root TEXT,
+                key_type TEXT
             )
         ''')
         conn.commit()
@@ -38,7 +39,6 @@ def search_songs(query):
         """, (query, query, query, query))
         return cursor.fetchall()
 
-
 @app.route('/')
 def home():
     return render_template('home.html')
@@ -49,23 +49,21 @@ def add_song():
     if request.method == 'POST':
         title = request.form['title'].strip()
         lyrics = request.form['lyrics'].strip()
-        song_number = request.form.get('song_number', '').strip()
-        page_number = request.form.get('page_number', '').strip()
-        key_root = request.form.get('key_root', '').strip()
-        key_type = request.form.get('key_type', '').strip()
-
-        key = f"{key_root} {key_type}".strip() if key_root else ''
+        song_number = request.form.get('song_number')
+        page_number = request.form.get('page_number')
+        key_root = request.form.get('key_root') or None
+        key_type = request.form.get('key_type') or None
 
         if not title or not lyrics:
-            message = 'Song title and lyrics are required.'
+            message = 'Song Title and Lyrics are required.'
         else:
             try:
                 with sqlite3.connect(DATABASE) as conn:
                     cursor = conn.cursor()
-                    cursor.execute('''
-                        INSERT INTO songs (title, lyrics, key, song_number, page_number)
-                        VALUES (?, ?, ?, ?, ?)
-                    ''', (title, lyrics, key, song_number, page_number))
+                    cursor.execute("""
+                        INSERT INTO songs (title, lyrics, song_number, page_number, key_root, key_type)
+                        VALUES (?, ?, ?, ?, ?, ?)
+                    """, (title, lyrics, song_number or None, page_number or None, key_root, key_type))
                     conn.commit()
                 message = 'Song added successfully!'
             except sqlite3.IntegrityError:
@@ -87,7 +85,6 @@ def search():
     all_songs = get_all_songs()
     return render_template('search.html', results=results, query=query, searched=searched, all_songs=all_songs)
 
-# Initialize database only if it doesn't exist
 if not os.path.exists(DATABASE):
     init_db()
 
