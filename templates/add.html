@@ -93,11 +93,22 @@
       background: #1a252f;
     }
 
-    .message {
+    .message, .error {
       text-align: center;
       margin-top: 10px;
-      color: green;
       font-weight: bold;
+      padding: 10px;
+      border-radius: 6px;
+    }
+
+    .message {
+      color: green;
+      background-color: #e0ffe0;
+    }
+
+    .error {
+      color: #900;
+      background-color: #ffe0e0;
     }
 
     .back-button {
@@ -142,6 +153,10 @@
     {% if message %}
       <p class="message">{{ message }}</p>
     {% endif %}
+    {% if error %}
+      <p class="error">{{ error }}</p>
+    {% endif %}
+
     <form method="POST">
       <label for="title">Song Title *</label>
       <input type="text" id="title" name="title" required>
@@ -174,7 +189,6 @@
       <input type="submit" value="Save Song">
     </form>
 
-    <!-- Home button placed inside the content flow -->
     <div style="margin-top: 30px;">
       <a href="/" class="back-button">🏠 Home</a>
     </div>

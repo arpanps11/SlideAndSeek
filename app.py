@@ -22,42 +22,36 @@ def add_song():
     error = None
 
     if request.method == 'POST':
-        try:
-            title = request.form['title'].strip()
-            lyrics = request.form['lyrics'].strip()
-            key_root = request.form['key_root'].strip() or None
-            key_type = request.form['key_type'].strip() or None
-            song_number = request.form['song_number'].strip() or None
-            page_number = request.form['page_number'].strip() or None
+        title = request.form['title'].strip()
+        lyrics = request.form['lyrics'].strip()
+        key_root = request.form['key_root'].strip() or None
+        key_type = request.form['key_type'].strip() or None
+        song_number = request.form['song_number'].strip() or None
+        page_number = request.form['page_number'].strip() or None
 
-            with sqlite3.connect(DATABASE) as conn:
-                cursor = conn.cursor()
-                cursor.execute("SELECT COUNT(*) FROM songs WHERE title = ?", (title,))
-                if cursor.fetchone()[0] > 0:
-                    error = "A song with this title already exists."
-                else:
-                    cursor.execute("""
-                        INSERT INTO songs (title, lyrics, key_root, key_type, song_number, page_number)
-                        VALUES (?, ?, ?, ?, ?, ?)
-                    """, (title, lyrics, key_root, key_type, song_number, page_number))
-                    conn.commit()
-                    message = "Song added successfully!"
-        except Exception as e:
-            error = "An error occurred while adding the song."
+        with sqlite3.connect(DATABASE) as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT COUNT(*) FROM songs WHERE LOWER(title) = LOWER(?)", (title,))
+            if cursor.fetchone()[0] > 0:
+                error = "A song with this title already exists."
+            else:
+                cursor.execute("INSERT INTO songs (title, lyrics, key_root, key_type, song_number, page_number) VALUES (?, ?, ?, ?, ?, ?)",
+                               (title, lyrics, key_root, key_type, song_number, page_number))
+                conn.commit()
+                message = "Song added successfully!"
 
     return render_template('add.html', message=message, error=error)
 
 # Search function
 def search_songs(query):
-    query = query.strip()
     with sqlite3.connect(DATABASE) as conn:
         cursor = conn.cursor()
-        like_query = f"%{query}%"
+        query = f"%{query.strip()}%"
         cursor.execute("""
             SELECT title, lyrics, key_root, key_type, song_number, id
             FROM songs
             WHERE title LIKE ? OR lyrics LIKE ? OR key_root LIKE ? OR key_type LIKE ?
-        """, (like_query, like_query, like_query, like_query))
+        """, (query, query, query, query))
         return cursor.fetchall()
 
 # Autocomplete titles
@@ -88,27 +82,34 @@ def edit_song(song_id):
     if not session.get('authenticated'):
         return redirect(url_for('verify', next=f'/edit/{song_id}'))
 
+    error = None
+    message = None
+
     with sqlite3.connect(DATABASE) as conn:
         cursor = conn.cursor()
 
         if request.method == 'POST':
-            try:
-                title = request.form['title'].strip()
-                lyrics = request.form['lyrics'].strip()
-                key_root = request.form['key_root'].strip() or None
-                key_type = request.form['key_type'].strip() or None
-                song_number = request.form['song_number'].strip() or None
-                page_number = request.form['page_number'].strip() or None
+            title = request.form['title'].strip()
+            lyrics = request.form['lyrics'].strip()
+            key_root = request.form['key_root'].strip() or None
+            key_type = request.form['key_type'].strip() or None
+            song_number = request.form['song_number'].strip() or None
+            page_number = request.form['page_number'].strip() or None
 
+            try:
                 cursor.execute("""
                     UPDATE songs
                     SET title = ?, lyrics = ?, key_root = ?, key_type = ?, song_number = ?, page_number = ?
                     WHERE id = ?
                 """, (title, lyrics, key_root, key_type, song_number, page_number, song_id))
-                conn.commit()
-                return redirect('/search')
+                if cursor.rowcount == 0:
+                    error = "No matching song found to update."
+                else:
+                    conn.commit()
+                    message = "Song updated successfully!"
+                    return redirect(url_for('search'))
             except Exception as e:
-                return "Something went wrong while updating.", 400
+                error = "Something went wrong while updating."
 
         cursor.execute("""
             SELECT title, lyrics, key_root, key_type, song_number, page_number
@@ -117,7 +118,7 @@ def edit_song(song_id):
         """, (song_id,))
         song = cursor.fetchone()
 
-    return render_template('edit.html', song=song, song_id=song_id)
+    return render_template('edit.html', song=song, song_id=song_id, error=error, message=message)
 
 # Password verification
 @app.route('/verify', methods=['GET', 'POST'])
@@ -135,7 +136,7 @@ def verify():
 
     return render_template('verify.html', next_page=next_page, error=error)
 
-# Generate route (optional)
+# Generate route
 @app.route('/generate')
 def generate():
     return "Coming soon"

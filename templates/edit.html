@@ -66,11 +66,37 @@
       font-weight: 500;
       text-align: center;
     }
+
+    .message {
+      margin-top: 15px;
+      padding: 10px;
+      border-radius: 6px;
+      text-align: center;
+      font-weight: bold;
+    }
+
+    .error {
+      background-color: #ffe0e0;
+      color: #900;
+    }
+
+    .success {
+      background-color: #e0ffe0;
+      color: #060;
+    }
   </style>
 </head>
 <body>
   <div class="form-container">
     <h2>Edit Song</h2>
+
+    {% if error %}
+      <div class="message error">{{ error }}</div>
+    {% endif %}
+    {% if message %}
+      <div class="message success">{{ message }}</div>
+    {% endif %}
+
     <form method="POST">
       <label>Title:</label>
       <input type="text" name="title" value="{{ song[0] }}" required>
@@ -79,7 +105,7 @@
       <textarea name="lyrics" rows="8" required>{{ song[1] }}</textarea>
 
       <label>Key:</label>
-      <select name="key_note">
+      <select name="key_root">
         <option value="">-- Select --</option>
         {% for note in ['A', 'A#', 'B', 'C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#'] %}
           <option value="{{ note }}" {% if song[2] == note %}selected{% endif %}>{{ note }}</option>
