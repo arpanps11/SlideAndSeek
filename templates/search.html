@@ -104,20 +104,21 @@
       margin-top: 10px;
     }
 
-    .back-button {
+    .home-button {
       display: inline-block;
-      margin: 30px auto 10px;
-      padding: 10px 16px;
+      margin: 20px auto;
       background: #2c3e50;
       color: white;
-      border-radius: 6px;
-      font-size: 0.95em;
+      padding: 10px 16px;
+      border-radius: 8px;
       text-decoration: none;
+      font-weight: 500;
+      font-size: 1rem;
       transition: background 0.3s ease;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+      text-align: center;
     }
 
-    .back-button:hover {
+    .home-button:hover {
       background: #1a252f;
     }
   </style>
@@ -141,7 +142,10 @@
       <h2>Results</h2>
       {% for song in results %}
         <div class="result-block">
-          <strong>{{ song[0] }}</strong> (Key: {{ song[2] }})
+          <strong>{{ song[0] }}</strong>
+          {% if song[2] %}
+            (Key: {{ song[2] }}{% if song[3] %} {{ song[3] }}{% endif %})
+          {% endif %}
           <pre>{{ song[1] }}</pre>
         </div>
       {% endfor %}
@@ -149,9 +153,7 @@
       <p><em>No results found for "{{ query }}"</em></p>
     {% endif %}
 
-    <div style="text-align: center;">
-      <a href="/" class="back-button">🏠 Home</a>
-    </div>
+    <a href="/" class="home-button">🏠 Home</a>
   </main>
 
   <footer>

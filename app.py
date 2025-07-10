@@ -31,11 +31,13 @@ def search_songs(query):
     with sqlite3.connect(DATABASE) as conn:
         cursor = conn.cursor()
         query = f"%{query}%"
-        cursor.execute('''
-            SELECT title, lyrics, key FROM songs 
-            WHERE title LIKE ? OR lyrics LIKE ? OR key LIKE ?
-        ''', (query, query, query))
+        cursor.execute("""
+            SELECT title, lyrics, key_root, key_type
+            FROM songs
+            WHERE title LIKE ? OR lyrics LIKE ? OR key_root LIKE ? OR key_type LIKE ?
+        """, (query, query, query, query))
         return cursor.fetchall()
+
 
 @app.route('/')
 def home():
