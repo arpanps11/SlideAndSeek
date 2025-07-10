@@ -3,7 +3,7 @@ import sqlite3
 import os
 
 app = Flask(__name__)
-app.secret_key = 'supersecretkey'
+app.secret_key = 'supersecretkey_root'
 
 DB_FILE = 'songs.db'
 PASSWORD = 'ebccni@2025'
@@ -44,7 +44,7 @@ def add_song():
         lyrics = request.form.get('lyrics', '').strip()
         song_number = request.form.get('song_number')
         page_number = request.form.get('page_number')
-        key = request.form.get('key')
+        key_root = request.form.get('key_root')
         key_type = request.form.get('key_type')
 
         if not title or not lyrics:
@@ -52,16 +52,16 @@ def add_song():
         else:
             conn = get_db_connection()
             cursor = conn.cursor()
-            cursor.execute("SELECT * FROM songs WHERE LOWER(title) = LOWER(?)", (title,))
+            cursor.execute("SELECT * FROM songs WHERE LOWER(title) = LOWER(?)", (title.lower(),))
             existing = cursor.fetchone()
 
             if existing:
                 error = "Song title already exists."
             else:
                 cursor.execute("""
-                    INSERT INTO songs (title, lyrics, song_number, page_number, key, key_type)
+                    INSERT INTO songs (title, lyrics, song_number, page_number, key_root, key_type)
                     VALUES (?, ?, ?, ?, ?, ?)
-                """, (title, lyrics, song_number, page_number, key, key_type))
+                """, (title, lyrics, song_number, page_number, key_root, key_type))
                 conn.commit()
                 success = "Song added successfully!"
             conn.close()
@@ -90,22 +90,22 @@ def edit_song(song_id):
         lyrics = request.form.get('lyrics', '').strip()
         song_number = request.form.get('song_number')
         page_number = request.form.get('page_number')
-        key = request.form.get('key')
+        key_root = request.form.get('key_root')
         key_type = request.form.get('key_type')
 
         if not title or not lyrics:
             error = "Title and lyrics are required."
         else:
-            cursor.execute("SELECT id FROM songs WHERE LOWER(title) = LOWER(?) AND id != ?", (title, song_id))
+            cursor.execute("SELECT id FROM songs WHERE LOWER(title) = LOWER(?) AND id != ?", (title.lower(), song_id))
             duplicate = cursor.fetchone()
             if duplicate:
                 error = "Another song with this title already exists."
             else:
                 cursor.execute("""
                     UPDATE songs
-                    SET title = ?, lyrics = ?, song_number = ?, page_number = ?, key = ?, key_type = ?
+                    SET title = ?, lyrics = ?, song_number = ?, page_number = ?, key_root = ?, key_type = ?
                     WHERE id = ?
-                """, (title, lyrics, song_number, page_number, key, key_type, song_id))
+                """, (title, lyrics, song_number, page_number, key_root, key_type, song_id))
                 conn.commit()
                 success = "Song updated successfully."
                 cursor.execute("SELECT * FROM songs WHERE id = ?", (song_id,))
@@ -128,9 +128,11 @@ def search():
         query = request.form.get('query', '').strip().lower()
         searched = True
         cursor.execute("""
-            SELECT title, lyrics, key, key_type, song_number, id FROM songs
-            WHERE LOWER(title) LIKE ? OR LOWER(lyrics) LIKE ? OR LOWER(key) = ?
-        """, (f'%{query}%', f'%{query}%', query))
+            SELECT title, lyrics, key_root, key_type, song_number, id FROM songs
+            WHERE LOWER(title) LIKE ? 
+               OR LOWER(lyrics) LIKE ? 
+               OR LOWER(key_root || ' ' || IFNULL(key_type, '')) LIKE ?
+        """, (f'%{query}%', f'%{query}%', f'%{query}%'))
         results = cursor.fetchall()
     conn.close()
     return render_template('search.html', results=results, searched=searched, query=query, all_songs=all_songs)
@@ -150,7 +152,7 @@ if __name__ == '__main__':
                 lyrics TEXT NOT NULL,
                 song_number TEXT,
                 page_number TEXT,
-                key TEXT,
+                key_root TEXT,
                 key_type TEXT
             )
         ''')
