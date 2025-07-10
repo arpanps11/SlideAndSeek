@@ -105,18 +105,15 @@
     }
 
     .back-button {
-      position: fixed;
-      bottom: 10px;
-      left: 50%;
-      transform: translateX(-50%);
+      display: inline-block;
+      margin: 30px auto 10px;
+      padding: 10px 16px;
       background: #2c3e50;
       color: white;
-      padding: 12px 20px;
-      border: none;
-      border-radius: 8px;
-      font-size: 1em;
-      cursor: pointer;
-      z-index: 999;
+      border-radius: 6px;
+      font-size: 0.95em;
+      text-decoration: none;
+      transition: background 0.3s ease;
       box-shadow: 0 2px 6px rgba(0,0,0,0.2);
     }
 
@@ -141,23 +138,25 @@
     </form>
 
     {% if results %}
-  <h2>Results</h2>
-  {% for song in results %}
-    <div class="result-block">
-      <strong>{{ song[0] }}</strong> (Key: {{ song[2] }})
-      <pre>{{ song[1] }}</pre>
+      <h2>Results</h2>
+      {% for song in results %}
+        <div class="result-block">
+          <strong>{{ song[0] }}</strong> (Key: {{ song[2] }})
+          <pre>{{ song[1] }}</pre>
+        </div>
+      {% endfor %}
+    {% elif searched %}
+      <p><em>No results found for "{{ query }}"</em></p>
+    {% endif %}
+
+    <div style="text-align: center;">
+      <a href="/" class="back-button">🏠 Home</a>
     </div>
-  {% endfor %}
-{% elif searched %}
-  <p><em>No results found for "{{ query }}"</em></p>
-{% endif %}
   </main>
 
   <footer>
     <p>🎶 SlideAndSeek | Find Your Song</p>
   </footer>
-
-  <a href="/" class="back-button">🏠 Back to Home</a>
 
   <script>
     const songTitles = {{ all_songs | tojson }};
