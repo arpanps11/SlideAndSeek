@@ -86,8 +86,8 @@
   <div class="form-container">
     <h2>Edit Song</h2>
 
-    {% if message %}
-      <p class="message">{{ message }}</p>
+    {% if success %}
+      <p class="message">{{ success }}</p>
     {% endif %}
     {% if error %}
       <p class="error">{{ error }}</p>
@@ -95,31 +95,31 @@
 
     <form method="POST">
       <label>Title:</label>
-      <input type="text" name="title" value="{{ song[0] }}" required>
+      <input type="text" name="title" value="{{ song[1] }}" required>
 
       <label>Lyrics:</label>
-      <textarea name="lyrics" rows="8" required>{{ song[1] }}</textarea>
+      <textarea name="lyrics" rows="8" required>{{ song[2] }}</textarea>
 
       <label>Key:</label>
       <select name="key_note">
         <option value="">-- Select --</option>
         {% for note in ['A', 'A#', 'B', 'C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#'] %}
-          <option value="{{ note }}" {% if song[2] == note %}selected{% endif %}>{{ note }}</option>
+          <option value="{{ note }}" {% if song[5] == note %}selected{% endif %}>{{ note }}</option>
         {% endfor %}
       </select>
 
       <label>Key Type:</label>
       <select name="key_type">
         <option value="">-- Select --</option>
-        <option value="Major" {% if song[3] == 'Major' %}selected{% endif %}>Major</option>
-        <option value="Minor" {% if song[3] == 'Minor' %}selected{% endif %}>Minor</option>
+        <option value="Major" {% if song[6] == 'Major' %}selected{% endif %}>Major</option>
+        <option value="Minor" {% if song[6] == 'Minor' %}selected{% endif %}>Minor</option>
       </select>
 
       <label>Song Number:</label>
-      <input type="text" name="song_number" value="{{ song[4] or '' }}" maxlength="3">
+      <input type="text" name="song_number" value="{{ song[3] or '' }}" maxlength="3">
 
       <label>Page Number:</label>
-      <input type="text" name="page_number" value="{{ song[5] or '' }}" maxlength="3">
+      <input type="text" name="page_number" value="{{ song[4] or '' }}" maxlength="3">
 
       <input type="submit" value="Save Changes">
     </form>
