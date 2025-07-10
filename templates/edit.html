@@ -101,25 +101,25 @@
       <textarea name="lyrics" rows="8" required>{{ song[2] }}</textarea>
 
       <label>Key:</label>
-      <select name="key_note">
+      <select name="key_root">
         <option value="">-- Select --</option>
         {% for note in ['A', 'A#', 'B', 'C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#'] %}
-          <option value="{{ note }}" {% if song[5] == note %}selected{% endif %}>{{ note }}</option>
+          <option value="{{ note }}" {% if song[3] == note %}selected{% endif %}>{{ note }}</option>
         {% endfor %}
       </select>
 
       <label>Key Type:</label>
       <select name="key_type">
         <option value="">-- Select --</option>
-        <option value="Major" {% if song[6] == 'Major' %}selected{% endif %}>Major</option>
-        <option value="Minor" {% if song[6] == 'Minor' %}selected{% endif %}>Minor</option>
+        <option value="Major" {% if song[4] == 'Major' %}selected{% endif %}>Major</option>
+        <option value="Minor" {% if song[4] == 'Minor' %}selected{% endif %}>Minor</option>
       </select>
 
       <label>Song Number:</label>
-      <input type="text" name="song_number" value="{{ song[3] or '' }}" maxlength="3">
+      <input type="text" name="song_number" value="{{ song[5] or '' }}" maxlength="3">
 
       <label>Page Number:</label>
-      <input type="text" name="page_number" value="{{ song[4] or '' }}" maxlength="3">
+      <input type="text" name="page_number" value="{{ song[6] or '' }}" maxlength="3">
 
       <input type="submit" value="Save Changes">
     </form>
