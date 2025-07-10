@@ -101,20 +101,16 @@
     }
 
     .back-button {
-      position: fixed;
-      bottom: 10px;
-      left: 50%;
-      transform: translateX(-50%);
+      display: inline-block;
       background: #2c3e50;
       color: white;
       padding: 12px 20px;
-      border: none;
       border-radius: 8px;
       font-size: 1em;
       cursor: pointer;
-      z-index: 999;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
       text-decoration: none;
+      transition: background 0.3s ease;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
     }
 
     .back-button:hover {
@@ -177,13 +173,16 @@
 
       <input type="submit" value="Save Song">
     </form>
+
+    <!-- Home button placed inside the content flow -->
+    <div style="margin-top: 30px;">
+      <a href="/" class="back-button">🏠 Home</a>
+    </div>
   </main>
 
   <footer>
     <p>🎶 SlideAndSeek | Worship with Ease</p>
   </footer>
-
-  <a href="/" class="back-button">🏠 Home</a>
 
   <script>
     const keyRootSelect = document.getElementById('key_root');
