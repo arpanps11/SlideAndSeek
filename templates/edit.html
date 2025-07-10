@@ -5,136 +5,104 @@
   <title>Edit Song</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link href="{{ url_for('static', filename='style.css') }}" rel="stylesheet">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
   <style>
     body {
-      margin: 0;
       font-family: 'Inter', sans-serif;
-      background: linear-gradient(180deg, #f0f4f8 0%, #ffffff 100%);
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-    }
-    header, footer {
-      text-align: center;
-      padding: 1em;
-      background: #2c3e50;
-      color: white;
-    }
-    main {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
+      background: #f9f9f9;
+      margin: 0;
       padding: 20px;
     }
-    form {
+
+    .form-container {
+      max-width: 600px;
+      margin: auto;
       background: white;
       padding: 20px;
       border-radius: 12px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-      width: 100%;
-      max-width: 500px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
     }
+
+    h2 {
+      text-align: center;
+    }
+
     label {
-      margin-top: 12px;
+      font-weight: bold;
       display: block;
-      font-weight: 600;
+      margin-top: 15px;
     }
-    input[type="text"],
-    textarea,
-    select {
+
+    input[type="text"], textarea, select {
       width: 100%;
       padding: 10px;
-      font-size: 1rem;
-      margin-top: 4px;
-      border: 1px solid #ccc;
+      margin-top: 5px;
       border-radius: 6px;
+      border: 1px solid #ccc;
     }
-    textarea {
-      resize: vertical;
-    }
+
     input[type="submit"] {
       margin-top: 20px;
-      width: 100%;
       padding: 12px;
-      font-size: 1rem;
+      width: 100%;
       background: #2c3e50;
       color: white;
       border: none;
       border-radius: 6px;
       cursor: pointer;
-      transition: background 0.3s ease;
     }
+
     input[type="submit"]:hover {
       background: #1a252f;
     }
-    .back-button {
-      position: fixed;
-      bottom: 10px;
-      left: 50%;
-      transform: translateX(-50%);
+
+    .home-button {
+      display: block;
+      margin: 20px auto;
       background: #2c3e50;
       color: white;
-      padding: 12px 20px;
-      border: none;
+      padding: 10px 16px;
       border-radius: 8px;
-      font-size: 1em;
-      cursor: pointer;
-      z-index: 999;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
       text-decoration: none;
+      font-weight: 500;
+      text-align: center;
     }
   </style>
 </head>
 <body>
-  <header>
-    <h1>Edit Song</h1>
-  </header>
-  <main>
+  <div class="form-container">
+    <h2>Edit Song</h2>
     <form method="POST">
-      <label for="title">Song Title</label>
-      <input type="text" id="title" name="title" value="{{ song[1] }}" required>
+      <label>Title:</label>
+      <input type="text" name="title" value="{{ song[0] }}" required>
 
-      <label for="lyrics">Lyrics</label>
-      <textarea id="lyrics" name="lyrics" rows="8" required>{{ song[2] }}</textarea>
+      <label>Lyrics:</label>
+      <textarea name="lyrics" rows="8" required>{{ song[1] }}</textarea>
 
-      <label for="key">Key</label>
-      <select name="key" id="key">
-        <option value="">--</option>
-        {% for k in ['A', 'A#', 'B', 'C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#'] %}
-          <option value="{{ k }}" {% if song[3] == k %}selected{% endif %}>{{ k }}</option>
+      <label>Key:</label>
+      <select name="key_note">
+        <option value="">-- Select --</option>
+        {% for note in ['A', 'A#', 'B', 'C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#'] %}
+          <option value="{{ note }}" {% if song[2] == note %}selected{% endif %}>{{ note }}</option>
         {% endfor %}
       </select>
 
-      <label for="key_type">Key Type</label>
-      <select name="key_type" id="key_type" {% if not song[3] %}disabled{% endif %}>
-        <option value="">--</option>
-        <option value="Major" {% if song[4] == 'Major' %}selected{% endif %}>Major</option>
-        <option value="Minor" {% if song[4] == 'Minor' %}selected{% endif %}>Minor</option>
+      <label>Key Type:</label>
+      <select name="key_type">
+        <option value="">-- Select --</option>
+        <option value="Major" {% if song[3] == 'Major' %}selected{% endif %}>Major</option>
+        <option value="Minor" {% if song[3] == 'Minor' %}selected{% endif %}>Minor</option>
       </select>
 
-      <label for="song_number">Song Number</label>
-      <input type="text" name="song_number" maxlength="3" value="{{ song[5] or '' }}">
+      <label>Song Number:</label>
+      <input type="text" name="song_number" value="{{ song[4] or '' }}" maxlength="3">
 
-      <label for="page_number">Page Number</label>
-      <input type="text" name="page_number" maxlength="3" value="{{ song[6] or '' }}">
+      <label>Page Number:</label>
+      <input type="text" name="page_number" value="{{ song[5] or '' }}" maxlength="3">
 
       <input type="submit" value="Save Changes">
     </form>
-  </main>
-  <footer>
-    <p>🎶 SlideAndSeek | Worship with Ease</p>
-  </footer>
-  <a href="/" class="back-button">🏠 Back to Home</a>
 
-  <script>
-    const keySelect = document.getElementById("key");
-    const keyTypeSelect = document.getElementById("key_type");
-
-    keySelect.addEventListener("change", function () {
-      keyTypeSelect.disabled = !this.value;
-    });
-  </script>
+    <a href="/" class="home-button">🏠 Home</a>
+  </div>
 </body>
 </html>
