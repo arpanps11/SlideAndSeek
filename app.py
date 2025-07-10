@@ -3,143 +3,145 @@ import sqlite3
 import os
 
 app = Flask(__name__)
-app.secret_key = 'your_secret_key'
-DATABASE = 'songs.db'
-SONG_EDIT_PASSWORD = "ebccni@2025"
+app.secret_key = 'your_secret_key_here'  # Change to a random string
 
-# Home route
+DATABASE = 'songs.db'
+
+# Ensure DB exists
+def init_db():
+    if not os.path.exists(DATABASE):
+        conn = sqlite3.connect(DATABASE)
+        c = conn.cursor()
+        c.execute('''
+            CREATE TABLE songs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                title TEXT UNIQUE NOT NULL,
+                lyrics TEXT NOT NULL,
+                key TEXT,
+                key_type TEXT,
+                song_number TEXT,
+                page_number TEXT
+            )
+        ''')
+        conn.commit()
+        conn.close()
+
+init_db()
+
 @app.route('/')
 def home():
-    return render_template('home.html')
+    return render_template('search.html')
 
-# Add song route
+@app.route('/search', methods=['POST'])
+def search():
+    query = request.form['query'].strip().lower()
+
+    conn = sqlite3.connect(DATABASE)
+    c = conn.cursor()
+    c.execute("SELECT id, title FROM songs WHERE LOWER(title) LIKE ?", ('%' + query + '%',))
+    results = c.fetchall()
+    conn.close()
+
+    return render_template('search.html', results=results, query=query)
+
+@app.route('/song/<int:song_id>')
+def view_song(song_id):
+    conn = sqlite3.connect(DATABASE)
+    c = conn.cursor()
+    c.execute("SELECT title, lyrics FROM songs WHERE id = ?", (song_id,))
+    song = c.fetchone()
+    conn.close()
+
+    if song:
+        return render_template('view.html', song=song)
+    else:
+        return redirect('/')
+
 @app.route('/add', methods=['GET', 'POST'])
 def add_song():
-    if not session.get('authenticated'):
-        return redirect(url_for('verify', next='/add'))
-
-    message = None
-    error = None
+    if 'authenticated' not in session:
+        return redirect('/verify')
 
     if request.method == 'POST':
         title = request.form['title'].strip()
         lyrics = request.form['lyrics'].strip()
-        key_root = request.form['key_root'].strip() or None
-        key_type = request.form['key_type'].strip() or None
-        song_number = request.form['song_number'].strip() or None
-        page_number = request.form['page_number'].strip() or None
+        key_root = request.form.get('key_root') or None
+        key_type = request.form.get('key_type') or None
+        song_number = request.form.get('song_number') or None
+        page_number = request.form.get('page_number') or None
 
-        with sqlite3.connect(DATABASE) as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT COUNT(*) FROM songs WHERE LOWER(title) = LOWER(?)", (title,))
-            if cursor.fetchone()[0] > 0:
-                error = "A song with this title already exists."
-            else:
-                cursor.execute("INSERT INTO songs (title, lyrics, key_root, key_type, song_number, page_number) VALUES (?, ?, ?, ?, ?, ?)",
-                               (title, lyrics, key_root, key_type, song_number, page_number))
-                conn.commit()
-                message = "Song added successfully!"
+        conn = sqlite3.connect(DATABASE)
+        c = conn.cursor()
 
-    return render_template('add.html', message=message, error=error)
+        # Check for duplicate title
+        c.execute("SELECT COUNT(*) FROM songs WHERE LOWER(title) = LOWER(?)", (title,))
+        count = c.fetchone()[0]
 
-# Search function
-def search_songs(query):
-    with sqlite3.connect(DATABASE) as conn:
-        cursor = conn.cursor()
-        query = f"%{query.strip()}%"
-        cursor.execute("""
-            SELECT title, lyrics, key_root, key_type, song_number, id
-            FROM songs
-            WHERE title LIKE ? OR lyrics LIKE ? OR key_root LIKE ? OR key_type LIKE ?
-        """, (query, query, query, query))
-        return cursor.fetchall()
+        if count > 0:
+            conn.close()
+            return render_template('add.html', error="A song with this title already exists.")
 
-# Autocomplete titles
-def get_all_titles():
-    with sqlite3.connect(DATABASE) as conn:
-        cursor = conn.cursor()
-        cursor.execute("SELECT title FROM songs")
-        return [{'title': row[0]} for row in cursor.fetchall()]
+        try:
+            c.execute("""
+                INSERT INTO songs (title, lyrics, key, key_type, song_number, page_number)
+                VALUES (?, ?, ?, ?, ?, ?)
+            """, (title, lyrics, key_root, key_type, song_number, page_number))
+            conn.commit()
+            conn.close()
+            return render_template('add.html', message="Song added successfully!")
+        except Exception as e:
+            conn.close()
+            return render_template('add.html', error="Something went wrong while saving the song.")
 
-# Search page
-@app.route('/search', methods=['GET', 'POST'])
-def search():
-    query = ''
-    results = []
-    searched = False
+    return render_template('add.html')
 
-    if request.method == 'POST':
-        query = request.form['query'].strip()
-        results = search_songs(query)
-        searched = True
-
-    all_songs = get_all_titles()
-    return render_template('search.html', query=query, results=results, searched=searched, all_songs=all_songs)
-
-# Edit song
 @app.route('/edit/<int:song_id>', methods=['GET', 'POST'])
 def edit_song(song_id):
-    if not session.get('authenticated'):
-        return redirect(url_for('verify', next=f'/edit/{song_id}'))
-
-    error = None
-    message = None
-
-    with sqlite3.connect(DATABASE) as conn:
-        cursor = conn.cursor()
-
-        if request.method == 'POST':
-            title = request.form['title'].strip()
-            lyrics = request.form['lyrics'].strip()
-            key_root = request.form['key_root'].strip() or None
-            key_type = request.form['key_type'].strip() or None
-            song_number = request.form['song_number'].strip() or None
-            page_number = request.form['page_number'].strip() or None
-
-            try:
-                cursor.execute("""
-                    UPDATE songs
-                    SET title = ?, lyrics = ?, key_root = ?, key_type = ?, song_number = ?, page_number = ?
-                    WHERE id = ?
-                """, (title, lyrics, key_root, key_type, song_number, page_number, song_id))
-                if cursor.rowcount == 0:
-                    error = "No matching song found to update."
-                else:
-                    conn.commit()
-                    message = "Song updated successfully!"
-                    return redirect(url_for('search'))
-            except Exception as e:
-                error = "Something went wrong while updating."
-
-        cursor.execute("""
-            SELECT title, lyrics, key_root, key_type, song_number, page_number
-            FROM songs
-            WHERE id = ?
-        """, (song_id,))
-        song = cursor.fetchone()
-
-    return render_template('edit.html', song=song, song_id=song_id, error=error, message=message)
-
-# Password verification
-@app.route('/verify', methods=['GET', 'POST'])
-def verify():
-    next_page = request.args.get('next', '/')
-    error = None
+    conn = sqlite3.connect(DATABASE)
+    c = conn.cursor()
 
     if request.method == 'POST':
-        password = request.form['password']
-        if password == SONG_EDIT_PASSWORD:
-            session['authenticated'] = True
-            return redirect(next_page)
+        title = request.form['title'].strip()
+        lyrics = request.form['lyrics'].strip()
+        key_note = request.form.get('key_note') or None
+        key_type = request.form.get('key_type') or None
+        song_number = request.form.get('song_number') or None
+        page_number = request.form.get('page_number') or None
+
+        try:
+            c.execute("""
+                UPDATE songs SET
+                    title = ?, lyrics = ?, key = ?, key_type = ?, song_number = ?, page_number = ?
+                WHERE id = ?
+            """, (title, lyrics, key_note, key_type, song_number, page_number, song_id))
+            conn.commit()
+            conn.close()
+            return render_template('edit.html', song=(title, lyrics, key_note, key_type, song_number, page_number), message="Song updated successfully.")
+        except Exception as e:
+            conn.close()
+            return render_template('edit.html', song=(title, lyrics, key_note, key_type, song_number, page_number), error="Something went wrong while updating.")
+
+    else:
+        c.execute("SELECT title, lyrics, key, key_type, song_number, page_number FROM songs WHERE id = ?", (song_id,))
+        song = c.fetchone()
+        conn.close()
+        if song:
+            return render_template('edit.html', song=song)
         else:
-            error = "Incorrect password. Try again."
+            return redirect('/')
 
-    return render_template('verify.html', next_page=next_page, error=error)
+@app.route('/verify', methods=['GET', 'POST'])
+def verify():
+    if request.method == 'POST':
+        password = request.form.get('password')
+        if password == 'ebccni@2025':
+            session['authenticated'] = True
+            return redirect('/add')
+        else:
+            return render_template('verify.html', error='Incorrect password.')
+    return render_template('verify.html')
 
-# Generate route
-@app.route('/generate')
-def generate():
-    return "Coming soon"
-
-if __name__ == '__main__':
-    app.run(debug=True)
+@app.route('/logout')
+def logout():
+    session.pop('authenticated', None)
+    return redirect('/')
