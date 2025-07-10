@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Verify Access</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="{{ url_for('static', filename='style.css') }}" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Inter', sans-serif;
+      background: linear-gradient(180deg, #f0f4f8 0%, #ffffff 100%);
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
+    header, footer {
+      text-align: center;
+      padding: 1em;
+      background: #2c3e50;
+      color: white;
+    }
+
+    main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    form {
+      background: white;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+      width: 100%;
+      max-width: 400px;
+      text-align: center;
+    }
+
+    input[type="password"] {
+      padding: 12px;
+      font-size: 1rem;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      width: 100%;
+    }
+
+    input[type="submit"] {
+      padding: 12px;
+      font-size: 1rem;
+      background: #2c3e50;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background 0.3s ease;
+    }
+
+    input[type="submit"]:hover {
+      background: #1a252f;
+    }
+
+    .error-message {
+      color: red;
+      font-weight: 500;
+      margin-bottom: 10px;
+    }
+
+    .home-button {
+      display: inline-block;
+      margin-top: 20px;
+      background: #2c3e50;
+      color: white;
+      padding: 10px 16px;
+      border-radius: 8px;
+      text-decoration: none;
+      font-weight: 500;
+      font-size: 1rem;
+      transition: background 0.3s ease;
+    }
+
+    .home-button:hover {
+      background: #1a252f;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Restricted Access</h1>
+  </header>
+
+  <main>
+    <form method="POST">
+      <h2>Please enter the password to continue</h2>
+      {% if error %}
+        <div class="error-message">{{ error }}</div>
+      {% endif %}
+      <input type="password" name="password" placeholder="Enter Password" required>
+      <input type="submit" value="Verify">
+    </form>
+
+    <a href="/" class="home-button">🏠 Home</a>
+  </main>
+
+  <footer>
+    <p>🎶 SlideAndSeek | Find Your Song</p>
+  </footer>
+</body>
+</html>
