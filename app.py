@@ -3,51 +3,20 @@ import sqlite3
 import os
 
 app = Flask(__name__)
-app.secret_key = 'your_secret_key_here'  # Required for session management
+app.secret_key = 'your_secret_key'
 DATABASE = 'songs.db'
-PASSWORD = 'ebccni@2025'  # Shared password
+SONG_EDIT_PASSWORD = "ebccni@2025"
 
-# Utility to initialize DB if needed (optional)
-def init_db():
-    with sqlite3.connect(DATABASE) as conn:
-        cursor = conn.cursor()
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS songs (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                title TEXT NOT NULL,
-                lyrics TEXT NOT NULL,
-                key_root TEXT,
-                key_type TEXT,
-                song_number TEXT,
-                page_number TEXT
-            )
-        ''')
-        conn.commit()
-
-# Home route
 @app.route('/')
 def home():
     return render_template('home.html')
 
-# Verification route
-@app.route('/verify', methods=['GET', 'POST'])
-def verify():
-    next_page = request.args.get('next', '/')
-    if request.method == 'POST':
-        password = request.form.get('password')
-        if password == PASSWORD:
-            session['verified'] = True
-            return redirect(next_page)
-        else:
-            return render_template('verify.html', error='Incorrect password', next=next_page)
-    return render_template('verify.html', next=next_page)
-
-# Add song route
 @app.route('/add', methods=['GET', 'POST'])
 def add_song():
-    if not session.get('verified'):
+    if not session.get('authenticated'):
         return redirect(url_for('verify', next='/add'))
 
+    message = None
     if request.method == 'POST':
         title = request.form['title'].strip()
         lyrics = request.form['lyrics'].strip()
@@ -61,11 +30,10 @@ def add_song():
             cursor.execute("INSERT INTO songs (title, lyrics, key_root, key_type, song_number, page_number) VALUES (?, ?, ?, ?, ?, ?)",
                            (title, lyrics, key_root, key_type, song_number, page_number))
             conn.commit()
-        return redirect('/')
+        message = "Song added successfully!"
 
-    return render_template('add.html')
+    return render_template('add.html', message=message)
 
-# Search function
 def search_songs(query):
     with sqlite3.connect(DATABASE) as conn:
         cursor = conn.cursor()
@@ -77,14 +45,12 @@ def search_songs(query):
         """, (query, query, query, query))
         return cursor.fetchall()
 
-# Autocomplete titles
 def get_all_titles():
     with sqlite3.connect(DATABASE) as conn:
         cursor = conn.cursor()
         cursor.execute("SELECT title FROM songs")
         return [{'title': row[0]} for row in cursor.fetchall()]
 
-# Search page
 @app.route('/search', methods=['GET', 'POST'])
 def search():
     query = ''
@@ -97,13 +63,13 @@ def search():
         searched = True
 
     all_songs = get_all_titles()
-    return render_template('search.html', query=query, results=results, searched=searched, all_songs=all_songs)
+    authenticated = session.get('authenticated', False)
+    return render_template('search.html', query=query, results=results, searched=searched, all_songs=all_songs, authenticated=authenticated)
 
-# Edit song
 @app.route('/edit/<int:song_id>', methods=['GET', 'POST'])
 def edit_song(song_id):
-    if not session.get('verified'):
-        return redirect(url_for('verify', next=url_for('edit_song', song_id=song_id)))
+    if not session.get('authenticated'):
+        return redirect(url_for('verify', next=f'/edit/{song_id}'))
 
     with sqlite3.connect(DATABASE) as conn:
         cursor = conn.cursor()
@@ -133,11 +99,24 @@ def edit_song(song_id):
 
     return render_template('edit.html', song=song, song_id=song_id)
 
+@app.route('/verify', methods=['GET', 'POST'])
+def verify():
+    next_page = request.args.get('next', '/')
+    error = None
+
+    if request.method == 'POST':
+        password = request.form['password']
+        if password == SONG_EDIT_PASSWORD:
+            session['authenticated'] = True
+            return redirect(next_page)
+        else:
+            error = "Incorrect password. Try again."
+
+    return render_template('verify.html', next_page=next_page, error=error)
+
 @app.route('/generate')
 def generate():
     return "Coming soon"
 
 if __name__ == '__main__':
-    if not os.path.exists(DATABASE):
-        init_db()
     app.run(debug=True)

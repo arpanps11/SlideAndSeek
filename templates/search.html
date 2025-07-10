@@ -136,6 +136,27 @@
     .home-button:hover {
       background: #1a252f;
     }
+
+    .no-results {
+      margin-top: 20px;
+      text-align: center;
+    }
+
+    .add-suggestion {
+      display: inline-block;
+      margin-top: 10px;
+      background: #27ae60;
+      color: white;
+      padding: 10px 16px;
+      border-radius: 8px;
+      text-decoration: none;
+      font-weight: 500;
+      transition: background 0.3s ease;
+    }
+
+    .add-suggestion:hover {
+      background: #1e8449;
+    }
   </style>
 </head>
 <body>
@@ -167,7 +188,10 @@
           </div>
         {% endfor %}
       {% else %}
-        <p><em>No results found for "{{ query }}"</em></p>
+        <div class="no-results">
+          <p><em>No results found for "{{ query }}"</em></p>
+          <a href="{{ url_for('verify', next='/add') }}" class="add-suggestion">➕ Add New Song</a>
+        </div>
       {% endif %}
     {% endif %}
 
