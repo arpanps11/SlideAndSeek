@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, session
+from flask import Flask, render_template, request, redirect, url_for, session, flash
 import sqlite3
 import os
 
@@ -107,9 +107,11 @@ def edit_song(song_id):
                 """, (title, lyrics, song_number, page_number, key_root, key_type, song_id))
                 conn.commit()
                 conn.close()
+                flash("Song updated successfully.")
                 return redirect(url_for('search', query=title))
+    else:
+        conn.close()
 
-    conn.close()
     return render_template('edit.html', song=song, error=error)
 
 @app.route('/search', methods=['GET', 'POST'])
@@ -119,17 +121,13 @@ def search():
     cursor.execute("SELECT title FROM songs")
     all_songs = [{'title': row[0]} for row in cursor.fetchall()]
 
-    query = ''
+    query = request.args.get('query', '').strip().lower()
     results = []
-    searched = False
+    searched = bool(query)
 
     if request.method == 'POST':
         query = request.form.get('query', '').strip().lower()
         searched = True
-    elif request.method == 'GET':
-        query = request.args.get('query', '').strip().lower()
-        if query:
-            searched = True
 
     if searched:
         cursor.execute("""

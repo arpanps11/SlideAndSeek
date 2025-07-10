@@ -121,6 +121,13 @@
     .home-button:hover {
       background: #1a252f;
     }
+
+    .flash-message {
+      color: green;
+      font-weight: bold;
+      margin: 10px 0;
+      text-align: center;
+    }
   </style>
 </head>
 <body>
@@ -129,6 +136,13 @@
   </header>
 
   <main>
+
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        <div class="flash-message">{{ messages[0] }}</div>
+      {% endif %}
+    {% endwith %}
+
     <form method="POST" id="search-form" autocomplete="off">
       <label for="query">Search by title, key, or lyrics:</label>
       <div class="autocomplete-box">
