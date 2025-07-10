@@ -1,132 +1,159 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, session
+from flask import Flask, render_template, request, redirect, url_for, session
 import sqlite3
 import os
 
 app = Flask(__name__)
-app.secret_key = 'your_secret_key_here'
+app.secret_key = 'supersecretkey'
 
-DATABASE = 'songs.db'
-ACCESS_PASSWORD = 'ebccni@2025'
+DB_FILE = 'songs.db'
+PASSWORD = 'ebccni@2025'
 
 def get_db_connection():
-    conn = sqlite3.connect(DATABASE)
-    conn.row_factory = sqlite3.Row
+    conn = sqlite3.connect(DB_FILE)
     return conn
+
+# ---------- Routes ----------
 
 @app.route('/')
 def home():
-    conn = get_db_connection()
-    songs = conn.execute('SELECT title FROM songs').fetchall()
-    conn.close()
-    all_songs = [song['title'] for song in songs]
-    return render_template('search.html', all_songs=all_songs, searched=False)
-
-@app.route('/', methods=['POST'])
-def search():
-    query = request.form['query'].strip()
-    conn = get_db_connection()
-    results = conn.execute("""
-        SELECT title, lyrics, key, key_type, song_number, id
-        FROM songs
-        WHERE title LIKE ? OR lyrics LIKE ? OR key LIKE ?
-    """, ('%' + query + '%', '%' + query + '%', '%' + query + '%')).fetchall()
-    songs = conn.execute('SELECT title FROM songs').fetchall()
-    conn.close()
-    all_songs = [song['title'] for song in songs]
-    return render_template('search.html', results=results, query=query, searched=True, all_songs=all_songs)
+    return render_template('home.html')
 
 @app.route('/verify', methods=['GET', 'POST'])
 def verify():
+    error = None
+    next_page = request.args.get('next', '/')
     if request.method == 'POST':
-        password = request.form['password']
-        if password == ACCESS_PASSWORD:
+        password = request.form.get('password')
+        if password == PASSWORD:
             session['authenticated'] = True
-            return redirect(url_for('add_song'))
+            return redirect(next_page)
         else:
-            flash('Incorrect password. Access denied.')
-    return render_template('verify.html')
+            error = "Incorrect password. Try again."
+    return render_template('verify.html', error=error, next=next_page)
 
 @app.route('/add', methods=['GET', 'POST'])
 def add_song():
     if not session.get('authenticated'):
-        return redirect(url_for('verify'))
+        return redirect(url_for('verify', next='/add'))
+
+    error = None
+    success = None
 
     if request.method == 'POST':
-        title = request.form['title'].strip()
-        lyrics = request.form['lyrics'].strip()
-        key = request.form.get('key') or None
-        key_type = request.form.get('key_type') or None
-        song_number = request.form.get('song_number') or None
-        page_number = request.form.get('page_number') or None
+        title = request.form.get('title', '').strip()
+        lyrics = request.form.get('lyrics', '').strip()
+        song_number = request.form.get('song_number')
+        page_number = request.form.get('page_number')
+        key = request.form.get('key')
+        key_type = request.form.get('key_type')
 
         if not title or not lyrics:
-            flash('Song title and lyrics are required.', 'error')
-            return render_template('add.html')
-
-        try:
+            error = "Song Title and Lyrics are required."
+        else:
             conn = get_db_connection()
-            existing = conn.execute("SELECT id FROM songs WHERE title = ?", (title,)).fetchone()
-            if existing:
-                flash('A song with this title already exists.', 'error')
-                conn.close()
-                return render_template('add.html')
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM songs WHERE LOWER(title) = LOWER(?)", (title,))
+            existing = cursor.fetchone()
 
-            conn.execute("""
-                INSERT INTO songs (title, lyrics, key, key_type, song_number, page_number)
-                VALUES (?, ?, ?, ?, ?, ?)
-            """, (title, lyrics, key, key_type, song_number, page_number))
-            conn.commit()
+            if existing:
+                error = "Song title already exists."
+            else:
+                cursor.execute("""
+                    INSERT INTO songs (title, lyrics, song_number, page_number, key, key_type)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                """, (title, lyrics, song_number, page_number, key, key_type))
+                conn.commit()
+                success = "Song added successfully!"
             conn.close()
-            flash('Song added successfully!', 'success')
-        except Exception as e:
-            flash('Something went wrong while adding the song.', 'error')
-    return render_template('add.html')
+
+    return render_template('add.html', error=error, success=success)
 
 @app.route('/edit/<int:song_id>', methods=['GET', 'POST'])
 def edit_song(song_id):
     if not session.get('authenticated'):
-        return redirect(url_for('verify'))
+        return redirect(url_for('verify', next=f'/edit/{song_id}'))
 
     conn = get_db_connection()
-    song = conn.execute("SELECT * FROM songs WHERE id = ?", (song_id,)).fetchone()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM songs WHERE id = ?", (song_id,))
+    song = cursor.fetchone()
 
     if not song:
         conn.close()
-        flash('Song not found.', 'error')
-        return redirect(url_for('home'))
+        return "Song not found", 404
+
+    error = None
+    success = None
 
     if request.method == 'POST':
-        title = request.form['title'].strip()
-        lyrics = request.form['lyrics'].strip()
-        key = request.form.get('key') or None
-        key_type = request.form.get('key_type') or None
-        song_number = request.form.get('song_number') or None
-        page_number = request.form.get('page_number') or None
+        title = request.form.get('title', '').strip()
+        lyrics = request.form.get('lyrics', '').strip()
+        song_number = request.form.get('song_number')
+        page_number = request.form.get('page_number')
+        key = request.form.get('key')
+        key_type = request.form.get('key_type')
 
         if not title or not lyrics:
-            flash('Song title and lyrics are required.', 'error')
-            return render_template('edit.html', song=song)
-
-        try:
-            # Check for duplicate title (but allow current song)
-            existing = conn.execute("SELECT id FROM songs WHERE title = ? AND id != ?", (title, song_id)).fetchone()
-            if existing:
-                flash('Another song with this title already exists.', 'error')
-                return render_template('edit.html', song=song)
-
-            conn.execute("""
-                UPDATE songs SET title = ?, lyrics = ?, key = ?, key_type = ?, song_number = ?, page_number = ?
-                WHERE id = ?
-            """, (title, lyrics, key, key_type, song_number, page_number, song_id))
-            conn.commit()
-            flash('Song updated successfully!', 'success')
-            conn.close()
-            return redirect(url_for('home'))
-        except:
-            flash('Something went wrong while updating.', 'error')
-
+            error = "Title and lyrics are required."
+        else:
+            cursor.execute("SELECT id FROM songs WHERE LOWER(title) = LOWER(?) AND id != ?", (title, song_id))
+            duplicate = cursor.fetchone()
+            if duplicate:
+                error = "Another song with this title already exists."
+            else:
+                cursor.execute("""
+                    UPDATE songs
+                    SET title = ?, lyrics = ?, song_number = ?, page_number = ?, key = ?, key_type = ?
+                    WHERE id = ?
+                """, (title, lyrics, song_number, page_number, key, key_type, song_id))
+                conn.commit()
+                success = "Song updated successfully."
+                cursor.execute("SELECT * FROM songs WHERE id = ?", (song_id,))
+                song = cursor.fetchone()
     conn.close()
-    return render_template('edit.html', song=song)
+    return render_template('edit.html', song=song, error=error, success=success)
+
+@app.route('/search', methods=['GET', 'POST'])
+def search():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT title FROM songs")
+    all_songs = [{'title': row[0]} for row in cursor.fetchall()]
+
+    query = ''
+    results = []
+    searched = False
+
+    if request.method == 'POST':
+        query = request.form.get('query', '').strip().lower()
+        searched = True
+        cursor.execute("""
+            SELECT title, lyrics, key, key_type, song_number, id FROM songs
+            WHERE LOWER(title) LIKE ? OR LOWER(lyrics) LIKE ? OR LOWER(key) = ?
+        """, (f'%{query}%', f'%{query}%', query))
+        results = cursor.fetchall()
+    conn.close()
+    return render_template('search.html', results=results, searched=searched, query=query, all_songs=all_songs)
+
+@app.route('/generate')
+def generate():
+    return "This is the generate worship slides page. Coming soon!"
 
 if __name__ == '__main__':
+    if not os.path.exists(DB_FILE):
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute('''
+            CREATE TABLE songs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                title TEXT NOT NULL,
+                lyrics TEXT NOT NULL,
+                song_number TEXT,
+                page_number TEXT,
+                key TEXT,
+                key_type TEXT
+            )
+        ''')
+        conn.commit()
+        conn.close()
     app.run(debug=True)
