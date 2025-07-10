@@ -14,7 +14,9 @@ def init_db():
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 title TEXT UNIQUE,
                 lyrics TEXT,
-                key TEXT
+                key TEXT,
+                song_number TEXT,
+                page_number TEXT
             )
         ''')
         conn.commit()
@@ -29,7 +31,10 @@ def search_songs(query):
     with sqlite3.connect(DATABASE) as conn:
         cursor = conn.cursor()
         query = f"%{query}%"
-        cursor.execute("SELECT title, lyrics, key FROM songs WHERE title LIKE ? OR lyrics LIKE ? OR key LIKE ?", (query, query, query))
+        cursor.execute('''
+            SELECT title, lyrics, key FROM songs 
+            WHERE title LIKE ? OR lyrics LIKE ? OR key LIKE ?
+        ''', (query, query, query))
         return cursor.fetchall()
 
 @app.route('/')
@@ -42,15 +47,23 @@ def add_song():
     if request.method == 'POST':
         title = request.form['title'].strip()
         lyrics = request.form['lyrics'].strip()
-        key = request.form['key'].strip()
+        song_number = request.form.get('song_number', '').strip()
+        page_number = request.form.get('page_number', '').strip()
+        key_root = request.form.get('key_root', '').strip()
+        key_type = request.form.get('key_type', '').strip()
 
-        if not title or not lyrics or not key:
-            message = 'All fields are required.'
+        key = f"{key_root} {key_type}".strip() if key_root else ''
+
+        if not title or not lyrics:
+            message = 'Song title and lyrics are required.'
         else:
             try:
                 with sqlite3.connect(DATABASE) as conn:
                     cursor = conn.cursor()
-                    cursor.execute("INSERT INTO songs (title, lyrics, key) VALUES (?, ?, ?)", (title, lyrics, key))
+                    cursor.execute('''
+                        INSERT INTO songs (title, lyrics, key, song_number, page_number)
+                        VALUES (?, ?, ?, ?, ?)
+                    ''', (title, lyrics, key, song_number, page_number))
                     conn.commit()
                 message = 'Song added successfully!'
             except sqlite3.IntegrityError:

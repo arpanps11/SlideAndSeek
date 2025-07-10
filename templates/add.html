@@ -7,6 +7,86 @@
   <link href="{{ url_for('static', filename='style.css') }}" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
   <style>
+    body {
+      margin: 0;
+      font-family: 'Inter', sans-serif;
+      background: linear-gradient(180deg, #f0f4f8 0%, #ffffff 100%);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header, footer {
+      text-align: center;
+      padding: 1em;
+      background: #2c3e50;
+      color: white;
+    }
+
+    main {
+      flex: 1;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      padding: 40px 20px;
+    }
+
+    form {
+      background: white;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      width: 100%;
+      max-width: 600px;
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    label {
+      font-weight: 600;
+    }
+
+    input[type="text"], textarea, select {
+      padding: 12px;
+      font-size: 1rem;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 120px;
+    }
+
+    input[type="submit"] {
+      padding: 12px;
+      font-size: 1rem;
+      background: #2c3e50;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background 0.3s ease;
+    }
+
+    input[type="submit"]:hover {
+      background: #1a252f;
+    }
+
+    .row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .row > div {
+      flex: 1;
+      min-width: 120px;
+    }
+
     .back-button {
       position: fixed;
       bottom: 10px;
@@ -26,33 +106,76 @@
     .back-button:hover {
       background: #1a252f;
     }
+
+    select:disabled {
+      background-color: #f0f0f0;
+      color: #888;
+    }
   </style>
 </head>
 <body>
-  <div class="page slide-in">
-    <header>
-      <h1>Add New Song</h1>
-    </header>
+  <header>
+    <h1>Add New Song</h1>
+  </header>
 
-    <main>
-      <form method="POST">
-        <label for="title">Song Title</label>
-        <input type="text" id="title" name="title" required>
+  <main>
+    <form method="POST">
+      <label for="title">Song Title *</label>
+      <input type="text" id="title" name="title" required>
 
-        <label for="key">Key</label>
-        <input type="text" id="key" name="key" required>
+      <label for="lyrics">Lyrics *</label>
+      <textarea id="lyrics" name="lyrics" required></textarea>
 
-        <label for="lyrics">Lyrics</label>
-        <textarea id="lyrics" name="lyrics" rows="8" required></textarea>
+      <div class="row">
+        <div>
+          <label for="song_number">Song Number</label>
+          <input type="text" id="song_number" name="song_number" maxlength="3" pattern="\d{1,3}" inputmode="numeric">
+        </div>
+        <div>
+          <label for="page_number">Page Number</label>
+          <input type="text" id="page_number" name="page_number" maxlength="3" pattern="\d{1,3}" inputmode="numeric">
+        </div>
+      </div>
 
-        <input type="submit" value="Save Song">
-      </form>
-    </main>
+      <div class="row">
+        <div>
+          <label for="key">Key</label>
+          <select name="key_root" id="key_root">
+            <option value="">-- Select --</option>
+            <option>A</option><option>A#</option><option>B</option>
+            <option>C</option><option>C#</option><option>D</option>
+            <option>D#</option><option>E</option><option>F</option>
+            <option>F#</option><option>G</option><option>G#</option>
+          </select>
+        </div>
+        <div>
+          <label for="key_type">Type</label>
+          <select name="key_type" id="key_type" disabled>
+            <option value="">-- Select --</option>
+            <option>Major</option>
+            <option>Minor</option>
+          </select>
+        </div>
+      </div>
 
-    <footer>
-      <p>🎶 SlideAndSeek | Worship with Ease</p>
-    </footer>
-    <a href="/" class="back-button">🏠 Back to Home</a>
-  </div>
+      <input type="submit" value="Save Song">
+    </form>
+  </main>
+
+  <footer>
+    <p>🎶 SlideAndSeek | Worship with Ease</p>
+  </footer>
+
+  <a href="/" class="back-button">🏠 Home</a>
+
+  <script>
+    // Enable major/minor dropdown when a root note is selected
+    const keyRoot = document.getElementById('key_root');
+    const keyType = document.getElementById('key_type');
+
+    keyRoot.addEventListener('change', function () {
+      keyType.disabled = !this.value;
+    });
+  </script>
 </body>
 </html>
