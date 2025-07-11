@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Responsive Readings</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link href="{{ url_for('static', filename='style.css') }}" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet" />
+</head>
+<body>
+  <div class="page slide-in">
+    <header>
+      <h1>Responsive Readings</h1>
+    </header>
+
+    <main>
+      <p class="subtitle">Manage Responsive Readings</p>
+
+      <div class="button-container">
+        <a href="/rr/search" class="primary-btn">🔍 Search/Edit Responsive Readings</a>
+        <a href="/rr/add" class="primary-btn">➕ Add New Responsive Reading</a>
+      </div>
+
+      <div style="margin-top: 30px;">
+        <a href="/" class="back-button">🏠 Home</a>
+      </div>
+    </main>
+
+    <footer>
+      <p>📖 SlideAndSeek | Worship with Scripture</p>
+    </footer>
+  </div>
+</body>
+</html>

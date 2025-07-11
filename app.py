@@ -31,6 +31,8 @@ def verify():
             error = "Incorrect password. Try again."
     return render_template('verify.html', error=error, next=next_page)
 
+# ---------- Songs ----------
+
 @app.route('/add', methods=['GET', 'POST'])
 def add_song():
     if not session.get('authenticated'):
@@ -140,9 +142,101 @@ def search():
     conn.close()
     return render_template('search.html', results=results, searched=searched, query=query, all_songs=all_songs)
 
+# ---------- Responsive Readings ----------
+
+@app.route('/rr_home')
+def rr_home():
+    return render_template('rr_home.html')
+
+@app.route('/rr_add', methods=['GET', 'POST'])
+def rr_add():
+    if not session.get('authenticated'):
+        return redirect(url_for('verify', next='/rr_add'))
+
+    error = None
+    if request.method == 'POST':
+        rr_number = request.form.get('rr_number')
+        psalm_number = request.form.get('psalm_number')
+        page_number = request.form.get('page_number')
+        title = request.form.get('title', '').strip()
+        content = request.form.get('content', '').strip()
+
+        if not all([rr_number, psalm_number, page_number, title, content]):
+            error = "All fields are required."
+        else:
+            conn = get_db_connection()
+            cursor = conn.cursor()
+            cursor.execute("""
+                INSERT INTO responsive_readings (rr_number, psalm_number, page_number, title, content)
+                VALUES (?, ?, ?, ?, ?)
+            """, (rr_number, psalm_number, page_number, title, content))
+            conn.commit()
+            conn.close()
+            flash("Responsive Reading added successfully.")
+
+    return render_template('rr_add.html', error=error)
+
+@app.route('/rr_search', methods=['GET', 'POST'])
+def rr_search():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT id, rr_number, psalm_number FROM responsive_readings ORDER BY rr_number ASC")
+    rr_list = cursor.fetchall()
+
+    selected_rr_id = request.form.get('rr_id') if request.method == 'POST' else None
+    selected_rr = None
+
+    if selected_rr_id:
+        cursor.execute("SELECT * FROM responsive_readings WHERE id = ?", (selected_rr_id,))
+        selected_rr = cursor.fetchone()
+
+    conn.close()
+    return render_template('rr_search.html', rr_list=rr_list, selected_rr=selected_rr)
+
+@app.route('/rr_edit/<int:rr_id>', methods=['GET', 'POST'])
+def rr_edit(rr_id):
+    if not session.get('authenticated'):
+        return redirect(url_for('verify', next=f'/rr_edit/{rr_id}'))
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM responsive_readings WHERE id = ?", (rr_id,))
+    rr = cursor.fetchone()
+
+    if not rr:
+        conn.close()
+        return "Responsive Reading not found", 404
+
+    error = None
+
+    if request.method == 'POST':
+        rr_number = request.form.get('rr_number')
+        psalm_number = request.form.get('psalm_number')
+        page_number = request.form.get('page_number')
+        title = request.form.get('title', '').strip()
+        content = request.form.get('content', '').strip()
+
+        if not all([rr_number, psalm_number, page_number, title, content]):
+            error = "All fields are required."
+        else:
+            cursor.execute("""
+                UPDATE responsive_readings
+                SET rr_number = ?, psalm_number = ?, page_number = ?, title = ?, content = ?
+                WHERE id = ?
+            """, (rr_number, psalm_number, page_number, title, content, rr_id))
+            conn.commit()
+            conn.close()
+            flash("Responsive Reading updated successfully.")
+            return redirect(url_for('rr_search'))
+
+    conn.close()
+    return render_template('rr_edit.html', rr=rr, error=error)
+
 @app.route('/generate')
 def generate():
     return "This is the generate worship slides page. Coming soon!"
+
+# ---------- DB Initialization ----------
 
 if __name__ == '__main__':
     if not os.path.exists(DB_FILE):
@@ -161,4 +255,21 @@ if __name__ == '__main__':
         ''')
         conn.commit()
         conn.close()
+
+    # Ensure RR table exists
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS responsive_readings (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            rr_number INTEGER NOT NULL,
+            psalm_number INTEGER NOT NULL,
+            page_number TEXT NOT NULL,
+            title TEXT NOT NULL,
+            content TEXT NOT NULL
+        )
+    ''')
+    conn.commit()
+    conn.close()
+
     app.run(debug=True)
