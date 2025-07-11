@@ -180,23 +180,28 @@ def rr_add():
 
 @app.route('/rr_search', methods=['GET', 'POST'])
 def rr_search():
-    conn = get_db_connection()
+    conn = sqlite3.connect('songs.db')
+    conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
 
+    # Always fetch the dropdown list
     cursor.execute("SELECT id, rr_number, psalm_number FROM responsive_readings ORDER BY rr_number ASC")
-    rows = cursor.fetchall()
-    rr_list = [{'id': row[0], 'rr_number': row[1], 'psalm_number': row[2]} for row in rows]
+    rr_list = cursor.fetchall()
 
-    selected_rr_id = request.values.get('rr_id')  # ✅ FIX: handles GET and POST
-    selected_rr = None
-    selected_id = int(selected_rr_id) if selected_rr_id else None
+    rr = None
+    selected_id = None
+    searched = False
 
-    if selected_rr_id:
-        cursor.execute("SELECT * FROM responsive_readings WHERE id = ?", (selected_rr_id,))
-        selected_rr = cursor.fetchone()
+    if request.method == 'POST':
+        selected_id = request.form.get('rr_id')
+        searched = True
+        if selected_id:
+            cursor.execute("SELECT * FROM responsive_readings WHERE id = ?", (selected_id,))
+            rr = cursor.fetchone()
 
     conn.close()
-    return render_template('rr_search.html', rr_list=rr_list, selected_rr=selected_rr, selected_id=selected_id, searched=True)
+
+    return render_template('rr_search.html', rr_list=rr_list, rr=rr, selected_id=selected_id, searched=searched)
 
 
 @app.route('/rr_edit/<int:rr_id>', methods=['GET', 'POST'])
