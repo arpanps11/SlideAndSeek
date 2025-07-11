@@ -192,8 +192,8 @@ def rr_search():
     selected_id = None
     searched = False
 
-    if request.method == 'POST':
-        selected_id = request.form.get('rr_id')
+    if request.method == 'POST' or request.args.get('selected_id'):
+        selected_id = request.form.get('rr_id') or request.args.get('selected_id')
         searched = True
         if selected_id:
             cursor.execute("SELECT * FROM responsive_readings WHERE id = ?", (selected_id,))
@@ -238,7 +238,7 @@ def rr_edit(rr_id):
             conn.commit()
             conn.close()
             flash("Responsive Reading updated successfully.")
-            return redirect(url_for('rr_search'))
+            return redirect(url_for('rr_search', selected_id=rr_id))
 
     conn.close()
     return render_template('rr_edit.html', rr=rr, error=error)

@@ -17,6 +17,11 @@
       margin-bottom: 20px;
     }
 
+    .rr-details-container {
+      display: flex;
+      justify-content: center;
+    }
+
     .rr-details {
       background: #ffffff;
       padding: 20px;
@@ -49,7 +54,7 @@
       background: #1a252f;
     }
 
-     .home-button {
+    .home-button {
       display: inline-block;
       background: #2c3e50;
       color: white;
@@ -64,6 +69,20 @@
     .home-button:hover {
       background: #1a252f;
     }
+
+    .flash-message {
+      margin-bottom: 20px;
+      padding: 12px;
+      background-color: #e0f7e9;
+      border-left: 6px solid #2ecc71;
+      color: #2c3e50;
+      border-radius: 6px;
+      font-weight: 500;
+      max-width: 700px;
+      margin-left: auto;
+      margin-right: auto;
+      text-align: center;
+    }
   </style>
 </head>
 <body>
@@ -73,27 +92,37 @@
     </header>
 
     <main>
+      {% with messages = get_flashed_messages() %}
+        {% if messages %}
+          <div class="flash-message">
+            {{ messages[0] }}
+          </div>
+        {% endif %}
+      {% endwith %}
+
       <form method="POST">
         <label for="rr_id"><strong>Select a Responsive Reading:</strong></label>
         <select id="rr_id" name="rr_id" required onchange="this.form.submit()">
           <option value="">-- Choose Responsive Reading --</option>
-          {% for rr in rr_list %}
-            <option value="{{ rr.id }}" {% if selected_id == rr.id %}selected{% endif %}>
-              Responsive Reading {{ rr.rr_number }} (Psalm {{ rr.psalm_number }})
+          {% for rr_item in rr_list %}
+            <option value="{{ rr_item.id }}" {% if selected_id|int == rr_item.id %}selected{% endif %}>
+              Responsive Reading {{ rr_item.rr_number }} (Psalm {{ rr_item.psalm_number }})
             </option>
           {% endfor %}
         </select>
       </form>
 
       {% if rr %}
-        <div class="rr-details">
-          <h2>Responsive Reading {{ rr.rr_number }}: {{ rr.title }}</h2>
-          <p><strong>Psalm Number:</strong> {{ rr.psalm_number }}</p>
-          <p><strong>Page Number:</strong> {{ rr.page_number }}</p>
-          <p><strong>Content:</strong></p>
-          <pre style="white-space: pre-wrap;">{{ rr.content }}</pre>
+        <div class="rr-details-container">
+          <div class="rr-details">
+            <h2>Responsive Reading {{ rr.rr_number }}: {{ rr.title }}</h2>
+            <p><strong>Psalm Number:</strong> {{ rr.psalm_number }}</p>
+            <p><strong>Page Number:</strong> {{ rr.page_number }}</p>
+            <p><strong>Content:</strong></p>
+            <pre style="white-space: pre-wrap;">{{ rr.content }}</pre>
 
-          <a class="edit-btn" href="{{ url_for('rr_edit', rr_id=rr.id) }}">✏️ Edit Responsive Reading</a>
+            <a class="edit-btn" href="{{ url_for('rr_edit', rr_id=rr.id) }}">✏️ Edit Responsive Reading</a>
+          </div>
         </div>
       {% elif searched %}
         <p style="margin-top: 20px; color: #888;">No responsive reading selected.</p>
