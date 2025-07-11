@@ -135,7 +135,7 @@ def search():
             SELECT title, lyrics, key_root, key_type, song_number, id FROM songs
             WHERE LOWER(title) LIKE ? 
                OR LOWER(lyrics) LIKE ? 
-               OR LOWER(key_root || ' ' || IFNULL(key_type, '')) LIKE ?
+               OR LOWER(COALESCE(key_root, '') || ' ' || COALESCE(key_type, '')) LIKE ?
         """, (f'%{query}%', f'%{query}%', f'%{query}%'))
         results = cursor.fetchall()
 
