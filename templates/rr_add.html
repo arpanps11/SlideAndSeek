@@ -63,16 +63,25 @@
       color: green;
     }
 
+    .home-button-container {
+      margin-top: 30px;
+      text-align: center;
+    }
+
     .home-button {
-      display: block;
-      margin: 20px auto;
+      display: inline-block;
       background: #2c3e50;
       color: white;
-      padding: 10px 16px;
+      padding: 10px 20px;
       border-radius: 8px;
       text-decoration: none;
       font-weight: 500;
-      text-align: center;
+      font-size: 1rem;
+      transition: background 0.2s ease-in-out;
+    }
+
+    .home-button:hover {
+      background: #1a252f;
     }
   </style>
 </head>
@@ -83,10 +92,18 @@
     </header>
 
     <main>
+      {% with messages = get_flashed_messages() %}
+        {% if messages %}
+          <div class="message success">
+            {% for message in messages %}
+              <p>{{ message }}</p>
+            {% endfor %}
+          </div>
+        {% endif %}
+      {% endwith %}
+
       {% if error %}
         <p class="message error">{{ error }}</p>
-      {% elif success %}
-        <p class="message success">{{ success }}</p>
       {% endif %}
 
       <form method="POST">
@@ -108,7 +125,7 @@
         <button type="submit" class="submit-btn">➕ Add Responsive Reading</button>
       </form>
 
-      <div style="margin-top: 30px;">
+      <div class="home-button-container">
         <a href="/" class="home-button">🏠 Home</a>
       </div>
     </main>

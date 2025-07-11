@@ -183,12 +183,11 @@ def rr_search():
     conn = get_db_connection()
     cursor = conn.cursor()
 
-    # Fetch the RR list and convert to dictionaries so we can use rr.id, etc.
     cursor.execute("SELECT id, rr_number, psalm_number FROM responsive_readings ORDER BY rr_number ASC")
     rows = cursor.fetchall()
     rr_list = [{'id': row[0], 'rr_number': row[1], 'psalm_number': row[2]} for row in rows]
 
-    selected_rr_id = request.form.get('rr_id') if request.method == 'POST' else None
+    selected_rr_id = request.values.get('rr_id')  # ✅ FIX: handles GET and POST
     selected_rr = None
     selected_id = int(selected_rr_id) if selected_rr_id else None
 
