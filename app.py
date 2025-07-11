@@ -37,7 +37,6 @@ def add_song():
         return redirect(url_for('verify', next='/add'))
 
     error = None
-    success = None
 
     if request.method == 'POST':
         title = request.form.get('title', '').strip()
@@ -63,10 +62,10 @@ def add_song():
                     VALUES (?, ?, ?, ?, ?, ?)
                 """, (title, lyrics, song_number, page_number, key_root, key_type))
                 conn.commit()
-                success = "Song added successfully!"
+                flash("Song added successfully.")
             conn.close()
 
-    return render_template('add.html', error=error, success=success)
+    return render_template('add.html', error=error)
 
 @app.route('/edit/<int:song_id>', methods=['GET', 'POST'])
 def edit_song(song_id):
