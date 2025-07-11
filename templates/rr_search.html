@@ -87,13 +87,13 @@
 
       {% if selected_rr %}
         <div class="rr-details">
-          <h2>Responsive Reading {{ selected_rr.rr_number }}: {{ selected_rr.title }}</h2>
-          <p><strong>Psalm Number:</strong> {{ selected_rr.psalm_number }}</p>
-          <p><strong>Page Number:</strong> {{ selected_rr.page_number }}</p>
+          <h2>Responsive Reading {{ rr.rr_number }}: {{ rr.title }}</h2>
+          <p><strong>Psalm Number:</strong> {{ rr.psalm_number }}</p>
+          <p><strong>Page Number:</strong> {{ rr.page_number }}</p>
           <p><strong>Content:</strong></p>
-          <pre style="white-space: pre-wrap;">{{ selected_rr.content }}</pre>
+          <pre style="white-space: pre-wrap;">{{ rr.content }}</pre>
 
-          <a class="edit-btn" href="{{ url_for('rr_edit', rr_id=selected_rr.id) }}">✏️ Edit Responsive Reading</a>
+          <a class="edit-btn" href="{{ url_for('rr_edit', rr_id=rr.id) }}">✏️ Edit Responsive Reading</a>
         </div>
       {% elif searched %}
         <p style="margin-top: 20px; color: #888;">No responsive reading selected.</p>
