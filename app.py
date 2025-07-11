@@ -154,6 +154,7 @@ def rr_add():
         return redirect(url_for('verify', next='/rr_add'))
 
     error = None
+
     if request.method == 'POST':
         rr_number = request.form.get('rr_number')
         psalm_number = request.form.get('psalm_number')
@@ -173,6 +174,7 @@ def rr_add():
             conn.commit()
             conn.close()
             flash("Responsive Reading added successfully.")
+            return redirect(url_for('rr_add'))  # 🔁 This resets the form
 
     return render_template('rr_add.html', error=error)
 
@@ -180,18 +182,23 @@ def rr_add():
 def rr_search():
     conn = get_db_connection()
     cursor = conn.cursor()
+
+    # Fetch the RR list and convert to dictionaries so we can use rr.id, etc.
     cursor.execute("SELECT id, rr_number, psalm_number FROM responsive_readings ORDER BY rr_number ASC")
-    rr_list = cursor.fetchall()
+    rows = cursor.fetchall()
+    rr_list = [{'id': row[0], 'rr_number': row[1], 'psalm_number': row[2]} for row in rows]
 
     selected_rr_id = request.form.get('rr_id') if request.method == 'POST' else None
     selected_rr = None
+    selected_id = int(selected_rr_id) if selected_rr_id else None
 
     if selected_rr_id:
         cursor.execute("SELECT * FROM responsive_readings WHERE id = ?", (selected_rr_id,))
         selected_rr = cursor.fetchone()
 
     conn.close()
-    return render_template('rr_search.html', rr_list=rr_list, selected_rr=selected_rr)
+    return render_template('rr_search.html', rr_list=rr_list, selected_rr=selected_rr, selected_id=selected_id, searched=True)
+
 
 @app.route('/rr_edit/<int:rr_id>', methods=['GET', 'POST'])
 def rr_edit(rr_id):
