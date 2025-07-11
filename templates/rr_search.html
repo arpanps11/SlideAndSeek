@@ -116,9 +116,8 @@
         <div class="rr-details-container">
           <div class="rr-details">
             <h2>Responsive Reading {{ rr.rr_number }}: {{ rr.title }}</h2>
-            <p><strong>Psalm Number:</strong> {{ rr.psalm_number }}</p>
+            <p><strong>Psalm:</strong> {{ rr.psalm_number }}</p>
             <p><strong>Page Number:</strong> {{ rr.page_number }}</p>
-            <p><strong>Content:</strong></p>
             <pre style="white-space: pre-wrap;">{{ rr.content }}</pre>
 
             <a class="edit-btn" href="{{ url_for('rr_edit', rr_id=rr.id) }}">✏️ Edit Responsive Reading</a>
