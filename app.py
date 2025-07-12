@@ -252,96 +252,138 @@ def rr_edit(rr_id):
 # ---------- Generate Slides Route ----------
 @app.route('/generate', methods=['GET', 'POST'])
 def generate():
-    if request.method == 'POST':
-        form = request.form
-        section_order = form.getlist('section_order[]')
-        ppt = Presentation()
-
-        conn = get_db_connection()
-        cursor = conn.cursor()
-
-        for section in section_order:
-            if section == 'welcome':
-                welcome_text = form.get('welcome_text', 'Welcome to the Sunday Worship Service')
-                add_title_slide(ppt, welcome_text)
-
-            elif section == 'praise':
-                praise_ids = form.getlist('praise_ids[]')
-                for song_id in praise_ids:
-                    cursor.execute("SELECT * FROM songs WHERE id = ?", (song_id,))
-                    song = cursor.fetchone()
-                    if song:
-                        add_song_slides(ppt, song, include_title_slide=True)
-
-            elif section in ['opening', 'offertory', 'communion']:
-                song_id = form.get(f'{section}_id')
-                if song_id:
-                    cursor.execute("SELECT * FROM songs WHERE id = ?", (song_id,))
-                    song = cursor.fetchone()
-                    if song:
-                        title = section.capitalize() + " Hymn"
-                        add_title_slide(ppt, f"{title}\n{song['title']}", subtitle=compose_song_meta(song))
-                        add_song_slides(ppt, song)
-
-            elif section == 'rr':
-                rr_id = form.get('rr_id')
-                if rr_id:
-                    cursor.execute("SELECT * FROM responsive_readings WHERE id = ?", (rr_id,))
-                    rr = cursor.fetchone()
-                    if rr:
-                        rr_title = f"Responsive Reading {rr['rr_number']}\nPsalm {rr['psalm_number']}\nPage Number {rr['page_number']}\n{rr['title']}"
-                        add_title_slide(ppt, rr_title)
-                        verses = split_into_paragraphs(rr['content'])
-                        i = 0
-                        while i < len(verses):
-                            v1 = verses[i]
-                            if i + 1 < len(verses) and count_lines(v1) <= 4 and count_lines(verses[i+1]) <= 4:
-                                add_content_slide(ppt, f"{v1}\n\n{verses[i+1]}")
-                                i += 2
-                            else:
-                                add_content_slide(ppt, v1)
-                                i += 1
-
-            elif section == 'extras':
-                extra_title = form.get('extras_title', 'Special Number')
-                extra_ids = form.getlist('extras_ids[]')
-                for song_id in extra_ids:
-                    cursor.execute("SELECT * FROM songs WHERE id = ?", (song_id,))
-                    song = cursor.fetchone()
-                    if song:
-                        title = f"{extra_title}\n{song['title']}"
-                        add_title_slide(ppt, title, subtitle=compose_song_meta(song))
-                        add_song_slides(ppt, song)
-
-            elif section == 'benediction':
-                add_title_slide(ppt, "Benediction")
-                benedict_lyrics = (
-                    "Praise God, from Whom all blessings flow;\n"
-                    "Praise Him, all creatures here below;\n"
-                    "Praise Him above, ye heavenly host;\n"
-                    "Praise Father, Son, and Holy Ghost!\n"
-                    "Amen"
-                )
-                add_content_slide(ppt, benedict_lyrics)
-
-        conn.close()
-
-        buffer = BytesIO()
-        ppt.save(buffer)
-        buffer.seek(0)
-
-        today = datetime.today().strftime('%d_%m_%Y')
-        filename = f'Worship_{today}.pptx'
-        return send_file(buffer, as_attachment=True, download_name=filename)
-
-    # GET request (just render form)
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT id, title FROM songs ORDER BY title ASC")
+    cursor.execute("SELECT * FROM songs ORDER BY title ASC")
     songs = cursor.fetchall()
-    cursor.execute("SELECT id, rr_number, psalm_number FROM responsive_readings ORDER BY rr_number ASC")
+    cursor.execute("SELECT * FROM responsive_readings ORDER BY rr_number ASC")
     rrs = cursor.fetchall()
     conn.close()
+
+    if request.method == 'POST':
+        def add_slide(prs, title, lines=None, font_size=32):
+            slide_layout = prs.slide_layouts[5]
+            slide = prs.slides.add_slide(slide_layout)
+            shapes = slide.shapes
+            title_shape = shapes.title
+            title_shape.text = title
+            if lines:
+                txBox = slide.shapes.add_textbox(Inches(1), Inches(1.5), Inches(8), Inches(5))
+                tf = txBox.text_frame
+                tf.clear()
+                for line in lines:
+                    p = tf.add_paragraph()
+                    p.text = line
+                    p.font.size = Pt(font_size)
+
+        def get_song_by_id(song_id):
+            conn = get_db_connection()
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM songs WHERE id = ?", (song_id,))
+            song = cursor.fetchone()
+            conn.close()
+            return song
+
+        def get_rr_by_id(rr_id):
+            conn = get_db_connection()
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM responsive_readings WHERE id = ?", (rr_id,))
+            rr = cursor.fetchone()
+            conn.close()
+            return rr
+
+        section_order = request.form.getlist('section_order[]')
+        prs = Presentation()
+
+        for section in section_order:
+            if section == 'welcome_section':
+                welcome_text = request.form.get('welcome_text', 'Welcome to the Worship Service')
+                add_slide(prs, 'Welcome', [welcome_text])
+
+            elif section == 'praise_section':
+                praise_ids = request.form.getlist('praise_ids[]')
+                for song_id in praise_ids:
+                    song = get_song_by_id(int(song_id))
+                    if song:
+                        add_slide(prs, song['title'])
+                        for stanza in song['lyrics'].strip().split('\n\n'):
+                            lines = stanza.strip().split('\n')
+                            add_slide(prs, '', lines)
+
+            elif section == 'opening_section':
+                song_id = request.form.get('opening_id')
+                if song_id:
+                    song = get_song_by_id(int(song_id))
+                    if song:
+                        add_slide(prs, 'Opening Hymn')
+                        add_slide(prs, song['title'])
+                        for stanza in song['lyrics'].strip().split('\n\n'):
+                            lines = stanza.strip().split('\n')
+                            add_slide(prs, '', lines)
+
+            elif section == 'offertory_section':
+                song_id = request.form.get('offertory_id')
+                if song_id:
+                    song = get_song_by_id(int(song_id))
+                    if song:
+                        add_slide(prs, 'Offertory Hymn')
+                        add_slide(prs, song['title'])
+                        for stanza in song['lyrics'].strip().split('\n\n'):
+                            lines = stanza.strip().split('\n')
+                            add_slide(prs, '', lines)
+
+            elif section == 'communion_section':
+                song_id = request.form.get('communion_id')
+                if song_id:
+                    song = get_song_by_id(int(song_id))
+                    if song:
+                        add_slide(prs, 'Communion Hymn')
+                        add_slide(prs, song['title'])
+                        for stanza in song['lyrics'].strip().split('\n\n'):
+                            lines = stanza.strip().split('\n')
+                            add_slide(prs, '', lines)
+
+            elif section == 'rr_section':
+                rr_id = request.form.get('rr_id')
+                if rr_id:
+                    rr = get_rr_by_id(int(rr_id))
+                    if rr:
+                        add_slide(prs, f'Responsive Reading {rr["rr_number"]}', [f'Psalm {rr["psalm_number"]}'])
+                        verses = rr['content'].strip().split('\n')
+                        temp = []
+                        for verse in verses:
+                            temp.append(verse)
+                            if len(temp) == 2 or len(verse) > 80:
+                                add_slide(prs, '', temp)
+                                temp = []
+                        if temp:
+                            add_slide(prs, '', temp)
+
+            elif section == 'extras_section':
+                extras_title = request.form.get('extras_title', 'Extra Songs')
+                extras_ids = request.form.getlist('extras_ids[]')
+                add_slide(prs, extras_title)
+                for song_id in extras_ids:
+                    song = get_song_by_id(int(song_id))
+                    if song:
+                        add_slide(prs, song['title'])
+                        for stanza in song['lyrics'].strip().split('\n\n'):
+                            lines = stanza.strip().split('\n')
+                            add_slide(prs, '', lines)
+
+            elif section == 'benediction_section':
+                add_slide(prs, 'Benediction')
+                add_slide(prs, '', ['May the grace of our Lord Jesus Christ,',
+                                    'Love of God,',
+                                    'Fellowship of the Holy Spirit',
+                                    'Be with us all'])
+
+        ppt_io = BytesIO()
+        prs.save(ppt_io)
+        ppt_io.seek(0)
+        filename = f"Worship_{datetime.now().strftime('%d_%m_%Y')}.pptx"
+        return send_file(ppt_io, as_attachment=True, download_name=filename, mimetype='application/vnd.openxmlformats-officedocument.presentationml.presentation')
+
     return render_template('generate.html', songs=songs, rrs=rrs)
 
 # ---------- Slide Utility Functions ----------

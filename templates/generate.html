@@ -277,7 +277,7 @@
             <select name="rr_id">
                 <option value="">-- Select one reading --</option>
                 {% for rr in rrs %}
-                    <option value="{{ rr.id }}">RR {{ rr.rr_number }} (Psalm {{ rr.psalm_number }})</option>
+                    <option value="{{ rr.id }}">Responsive Reading {{ rr.rr_number }} (Psalm {{ rr.psalm_number }})</option>
                 {% endfor %}
             </select>
         </div>
@@ -297,7 +297,7 @@
 
         <div class="section" id="benediction_section" style="display:none;">
             <h3>Benediction</h3>
-            <p>Two final slides will be added: "Benediction" and a closing hymn.</p>
+            <p>Two final slides will be added: "Benediction" and the closing hymn.</p>
         </div>
 
         <div id="section_order" class="section-order"></div>
