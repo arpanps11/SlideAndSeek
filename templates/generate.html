@@ -12,6 +12,7 @@
             padding: 20px;
         }
         header, footer {
+      width=100%;
       text-align: center;
       padding: 1em;
       background: #3f72af;
@@ -74,14 +75,19 @@
             margin-top: 30px;
         }
         .home-button a {
-            text-decoration: none;
-            padding: 10px 20px;
-            background-color: #333;
-            color: white;
-            border-radius: 5px;
+            display: inline-block;
+      background: #2c3e50;
+      color: white;
+      padding: 12px 20px;
+      border-radius: 8px;
+      font-size: 1em;
+      cursor: pointer;
+      text-decoration: none;
+      transition: background 0.3s ease;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
         }
         .home-button a:hover {
-            background-color: #111;
+            background-color: #1a252f;
         }
         .section-box {
             border: 1px solid #ddd;
@@ -142,9 +148,11 @@
 <div class="home-button">
     <a href="/">←  Home</a>
 </div>
+<div>
 <footer>
     <p>🎶 SlideAndSeek | Build Worship Slides with Ease</p>
   </footer>
+</div>
 <script>
     const sectionsContainer = document.getElementById('sections');
     const sectionsMap = {
