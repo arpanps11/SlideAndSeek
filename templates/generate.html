@@ -34,9 +34,8 @@
             border: 1px solid #ccc;
         }
         button {
-            padding: 10px 16px;
-            margin-top: 10px;
-            margin-right: 8px;
+            padding: 6px 12px;
+            margin: 5px 4px 0 0;
             background-color: #0077cc;
             color: white;
             border: none;
@@ -46,37 +45,25 @@
         button:hover {
             background-color: #005fa3;
         }
-        .song-list, .section-box {
+        .song-list {
             margin-top: 10px;
         }
         .song-item {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 6px;
+            padding: 4px 0;
         }
-        .section-box {
-            border: 1px solid #ddd;
-            padding: 12px;
-            margin-bottom: 15px;
-            border-radius: 5px;
-            background-color: #f9f9f9;
+        .song-title {
+            flex: 1;
         }
-        .section-controls {
-            text-align: right;
-        }
-        .checkbox-label {
+        .controls {
             display: flex;
-            align-items: center;
-            margin-bottom: 8px;
-        }
-        .checkbox-label input[type="checkbox"] {
-            margin-right: 8px;
+            gap: 5px;
         }
         .home-button {
-            display: block;
             text-align: center;
-            margin: 30px auto 0;
+            margin-top: 30px;
         }
         .home-button a {
             text-decoration: none;
@@ -88,168 +75,243 @@
         .home-button a:hover {
             background-color: #111;
         }
+        .section-box {
+            border: 1px solid #ddd;
+            padding: 12px;
+            margin-bottom: 15px;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+        .section-controls {
+            text-align: right;
+        }
     </style>
 </head>
 <body>
-    <h1>Generate Worship Slides</h1>
+<h1>Generate Worship Slides</h1>
 
-    <form method="POST">
-        <div class="section-selector">
-            <label>Select Sections to Include (check to add):</label>
-            <div class="checkbox-label"><input type="checkbox" id="welcome_section"> Welcome Slide</div>
-            <div class="checkbox-label"><input type="checkbox" id="praise_section"> Praise and Worship</div>
-            <div class="checkbox-label"><input type="checkbox" id="opening_section"> Opening Hymn</div>
-            <div class="checkbox-label"><input type="checkbox" id="offertory_section"> Offertory Hymn</div>
-            <div class="checkbox-label"><input type="checkbox" id="communion_section"> Communion Hymn</div>
-            <div class="checkbox-label"><input type="checkbox" id="rr_section"> Responsive Reading</div>
-            <div class="checkbox-label"><input type="checkbox" id="extras_section"> Extras</div>
-            <div class="checkbox-label"><input type="checkbox" id="benediction_section"> Benediction</div>
-        </div>
-
-        <div id="sections" class="section-container"></div>
-
-        <div style="text-align:center;">
-            <button type="submit">Generate PowerPoint</button>
-        </div>
-    </form>
-
-    <div class="home-button">
-        <a href="/">← Back to Home</a>
+<form method="POST">
+    <div class="section-selector">
+        <label>Select Sections to Include (check to add):</label>
+        <div><input type="checkbox" id="welcome_section"> Welcome Slide</div>
+        <div><input type="checkbox" id="praise_section"> Praise and Worship</div>
+        <div><input type="checkbox" id="opening_section"> Opening Hymn</div>
+        <div><input type="checkbox" id="offertory_section"> Offertory Hymn</div>
+        <div><input type="checkbox" id="communion_section"> Communion Hymn</div>
+        <div><input type="checkbox" id="rr_section"> Responsive Reading</div>
+        <div><input type="checkbox" id="extras_section"> Extras</div>
+        <div><input type="checkbox" id="benediction_section"> Benediction</div>
     </div>
 
-    <script>
-        const sectionsContainer = document.getElementById('sections');
-        const sectionsMap = {
-            'welcome_section': 'Welcome Slide',
-            'praise_section': 'Praise and Worship',
-            'opening_section': 'Opening Hymn',
-            'offertory_section': 'Offertory Hymn',
-            'communion_section': 'Communion Hymn',
-            'rr_section': 'Responsive Reading',
-            'extras_section': 'Extras',
-            'benediction_section': 'Benediction'
+    <div id="sections" class="section-container"></div>
+
+    <div style="text-align:center;">
+        <button type="submit">Generate PowerPoint</button>
+    </div>
+</form>
+
+<div class="home-button">
+    <a href="/">← Back to Home</a>
+</div>
+
+<script>
+    const sectionsContainer = document.getElementById('sections');
+    const sectionsMap = {
+        'welcome_section': 'Welcome Slide',
+        'praise_section': 'Praise and Worship',
+        'opening_section': 'Opening Hymn',
+        'offertory_section': 'Offertory Hymn',
+        'communion_section': 'Communion Hymn',
+        'rr_section': 'Responsive Reading',
+        'extras_section': 'Extras',
+        'benediction_section': 'Benediction'
+    };
+
+    const songs = JSON.parse(`{{ songs|tojson|safe }}`);
+    const rrs = JSON.parse(`{{ rrs|tojson|safe }}`);
+
+    function createSongSearchBox(name, selectedContainerId) {
+        const wrapper = document.createElement('div');
+
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.placeholder = 'Search and select songs...';
+        input.oninput = function () {
+            const query = input.value.toLowerCase();
+            results.innerHTML = '';
+            songs.filter(song => song.title.toLowerCase().includes(query))
+                .forEach(song => {
+                    const btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.textContent = song.title;
+                    btn.onclick = () => {
+                        addSelectedSong(selectedContainerId, song, name);
+                    };
+                    results.appendChild(btn);
+                });
         };
 
-        const songs = {{ songs|tojson }};
-        const rrs = {{ rrs|tojson }};
+        const results = document.createElement('div');
+        results.style.marginTop = '6px';
 
-        function createSongDropdown(name, multiple=false) {
-            const select = document.createElement('select');
-            select.name = name;
-            if (multiple) select.multiple = true;
-            songs.forEach(song => {
-                const option = document.createElement('option');
-                option.value = song.id;
-                option.textContent = song.title;
-                select.appendChild(option);
-            });
-            return select;
-        }
+        wrapper.appendChild(input);
+        wrapper.appendChild(results);
+        return wrapper;
+    }
 
-        function createRRDropdown() {
-            const select = document.createElement('select');
-            select.name = 'rr_id';
-            rrs.forEach(rr => {
-                const option = document.createElement('option');
-                option.value = rr.id;
-                option.textContent = `Responsive Reading ${rr.rr_number} - Psalm ${rr.psalm_number}`;
-                select.appendChild(option);
-            });
-            return select;
-        }
+    function addSelectedSong(containerId, song, inputName) {
+        const container = document.getElementById(containerId);
+        const exists = container.querySelector(`input[value="${song.id}"]`);
+        if (exists) return;
 
-        function createSectionBox(id) {
-            const box = document.createElement('div');
-            box.className = 'section-box';
-            box.dataset.sectionId = id;
+        const item = document.createElement('div');
+        item.className = 'song-item';
 
-            const title = document.createElement('h3');
-            title.textContent = sectionsMap[id];
-            box.appendChild(title);
+        const title = document.createElement('span');
+        title.className = 'song-title';
+        title.textContent = song.title;
 
-            if (id === 'welcome_section') {
-                const input = document.createElement('input');
-                input.type = 'text';
-                input.name = 'welcome_text';
-                input.placeholder = 'Welcome to the Worship Service';
-                box.appendChild(input);
-            }
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = inputName;
+        input.value = song.id;
 
-            else if (id === 'praise_section') {
-                const select = createSongDropdown('praise_ids[]', true);
-                box.appendChild(select);
-            }
+        const up = document.createElement('button');
+        up.textContent = '↑';
+        up.onclick = () => {
+            const prev = item.previousElementSibling;
+            if (prev) container.insertBefore(item, prev);
+        };
 
-            else if (['opening_section', 'offertory_section', 'communion_section'].includes(id)) {
-                const select = createSongDropdown(id.replace('_section', '_id'));
-                box.appendChild(select);
-            }
+        const down = document.createElement('button');
+        down.textContent = '↓';
+        down.onclick = () => {
+            const next = item.nextElementSibling;
+            if (next) container.insertBefore(next, item);
+        };
 
-            else if (id === 'rr_section') {
-                const select = createRRDropdown();
-                box.appendChild(select);
-            }
+        const remove = document.createElement('button');
+        remove.textContent = '✖';
+        remove.onclick = () => container.removeChild(item);
 
-            else if (id === 'extras_section') {
-                const titleInput = document.createElement('input');
-                titleInput.type = 'text';
-                titleInput.name = 'extras_title';
-                titleInput.placeholder = 'Enter Extras Section Title';
-                box.appendChild(titleInput);
+        const controls = document.createElement('div');
+        controls.className = 'controls';
+        controls.append(up, down, remove);
 
-                const select = createSongDropdown('extras_ids[]', true);
-                box.appendChild(select);
-            }
+        item.append(title, input, controls);
+        container.appendChild(item);
+    }
 
-            else if (id === 'benediction_section') {
-                const p = document.createElement('p');
-                p.textContent = 'This section will include two fixed Benediction slides.';
-                box.appendChild(p);
-            }
-
-            const controls = document.createElement('div');
-            controls.className = 'section-controls';
-
-            const up = document.createElement('button');
-            up.type = 'button';
-            up.textContent = '↑';
-            up.onclick = () => {
-                const prev = box.previousElementSibling;
-                if (prev) sectionsContainer.insertBefore(box, prev);
-            };
-
-            const down = document.createElement('button');
-            down.type = 'button';
-            down.textContent = '↓';
-            down.onclick = () => {
-                const next = box.nextElementSibling;
-                if (next) sectionsContainer.insertBefore(next, box);
-            };
-
-            const hidden = document.createElement('input');
-            hidden.type = 'hidden';
-            hidden.name = 'section_order[]';
-            hidden.value = id;
-
-            controls.appendChild(up);
-            controls.appendChild(down);
-            box.appendChild(hidden);
-            box.appendChild(controls);
-
-            return box;
-        }
-
-        Object.keys(sectionsMap).forEach(id => {
-            document.getElementById(id).addEventListener('change', function() {
-                if (this.checked) {
-                    const sectionBox = createSectionBox(id);
-                    sectionsContainer.appendChild(sectionBox);
-                } else {
-                    const toRemove = [...sectionsContainer.children].find(div => div.dataset.sectionId === id);
-                    if (toRemove) sectionsContainer.removeChild(toRemove);
-                }
-            });
+    function createRRDropdown() {
+        const select = document.createElement('select');
+        select.name = 'rr_id';
+        rrs.forEach(rr => {
+            const option = document.createElement('option');
+            option.value = rr.id;
+            option.textContent = `Responsive Reading ${rr.rr_number} - Psalm ${rr.psalm_number}`;
+            select.appendChild(option);
         });
-    </script>
+        return select;
+    }
+
+    function createSongDropdown(name) {
+        const select = document.createElement('select');
+        select.name = name;
+        songs.forEach(song => {
+            const option = document.createElement('option');
+            option.value = song.id;
+            option.textContent = song.title;
+            select.appendChild(option);
+        });
+        return select;
+    }
+
+    function createSectionBox(id) {
+        const box = document.createElement('div');
+        box.className = 'section-box';
+        box.dataset.sectionId = id;
+
+        const title = document.createElement('h3');
+        title.textContent = sectionsMap[id];
+        box.appendChild(title);
+
+        if (id === 'welcome_section') {
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.name = 'welcome_text';
+            input.placeholder = 'Welcome to the Worship Service';
+            box.appendChild(input);
+        } else if (id === 'praise_section') {
+            const searchBox = createSongSearchBox('praise_ids[]', 'praise_selected');
+            const listContainer = document.createElement('div');
+            listContainer.id = 'praise_selected';
+            listContainer.className = 'song-list';
+            box.append(searchBox, listContainer);
+        } else if (['opening_section', 'offertory_section', 'communion_section'].includes(id)) {
+            const select = createSongDropdown(id.replace('_section', '_id'));
+            box.appendChild(select);
+        } else if (id === 'rr_section') {
+            const select = createRRDropdown();
+            box.appendChild(select);
+        } else if (id === 'extras_section') {
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.name = 'extras_title';
+            input.placeholder = 'Enter Extras Section Title';
+            box.appendChild(input);
+
+            const searchBox = createSongSearchBox('extras_ids[]', 'extras_selected');
+            const listContainer = document.createElement('div');
+            listContainer.id = 'extras_selected';
+            listContainer.className = 'song-list';
+            box.append(searchBox, listContainer);
+        } else if (id === 'benediction_section') {
+            const p = document.createElement('p');
+            p.textContent = 'This section will include two fixed Benediction slides.';
+            box.appendChild(p);
+        }
+
+        const hidden = document.createElement('input');
+        hidden.type = 'hidden';
+        hidden.name = 'section_order[]';
+        hidden.value = id;
+
+        const controls = document.createElement('div');
+        controls.className = 'section-controls';
+
+        const up = document.createElement('button');
+        up.type = 'button';
+        up.textContent = '↑';
+        up.onclick = () => {
+            const prev = box.previousElementSibling;
+            if (prev) sectionsContainer.insertBefore(box, prev);
+        };
+
+        const down = document.createElement('button');
+        down.type = 'button';
+        down.textContent = '↓';
+        down.onclick = () => {
+            const next = box.nextElementSibling;
+            if (next) sectionsContainer.insertBefore(next, box);
+        };
+
+        controls.append(up, down);
+        box.append(hidden, controls);
+
+        return box;
+    }
+
+    Object.keys(sectionsMap).forEach(id => {
+        document.getElementById(id).addEventListener('change', function () {
+            const exists = [...sectionsContainer.children].find(div => div.dataset.sectionId === id);
+            if (this.checked && !exists) {
+                const box = createSectionBox(id);
+                sectionsContainer.appendChild(box);
+            } else if (!this.checked && exists) {
+                sectionsContainer.removeChild(exists);
+            }
+        });
+    });
+</script>
 </body>
 </html>
