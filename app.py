@@ -356,24 +356,23 @@ def add_title_slide(ppt, title, subtitle=None):
     if subtitle:
         slide.placeholders[1].text = subtitle
 
-def add_content_slide(ppt, content):
-    slide_layout = ppt.slide_layouts[1]
-    slide = ppt.slides.add_slide(slide_layout)
-    textbox = slide.placeholders[1]
-    textbox.text = ""
-
-    tf = textbox.text_frame
-    tf.clear()
+def add_content_slide(prs, text, font_size=32):
+    slide_layout = prs.slide_layouts[5]  # Blank
+    slide = prs.slides.add_slide(slide_layout)
+    left = Inches(0.5)
+    top = Inches(1.5)
+    width = Inches(9)
+    height = Inches(5)
+    txBox = slide.shapes.add_textbox(left, top, width, height)
+    tf = txBox.text_frame
+    tf.clear()  # Remove default paragraphs
 
     p = tf.paragraphs[0]
-    p.text = content.replace('_x000D_', '').strip()
-    p.level = 0
-    p.font.size = Pt(32)
+    p.text = text
     p.alignment = PP_ALIGN.CENTER
-    if hasattr(p._element, 'get_or_add_pPr'):
-        bullet = p._element.get_or_add_pPr().find(".//a:buChar")
-        if bullet is not None:
-            p._element.get_or_add_pPr().remove(bullet)
+    p.font.size = Pt(font_size)
+    p.font.bold = True
+
 
 def add_song_slides(ppt, song, include_title_slide=False):
     if include_title_slide:
