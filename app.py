@@ -296,29 +296,24 @@ def generate():
                         add_song_slides(prs, song)
 
             elif section == 'rr_section':
-                rr_id = request.form.get('rr_id')
-                if rr_id:
-                    rr = get_rr_by_id(int(rr_id))
-                    if rr:
-                        title = f"Responsive Reading {rr['rr_number']}"
-                        subtitle = f"Psalm {rr['psalm_number']} | Page {rr['page_number']}" if rr['page_number'] else f"Psalm {rr['psalm_number']}"
-                        add_title_slide(prs, title, subtitle)
-                        verses = [v.strip().replace('_x000D_', '').replace('\r', '') for v in rr['content'].split('\n') if v.strip()]
-                        grouped = []
+                        # Responsive Reading section
+        rr_id = request.form.get('responsive_reading_id')
+        if rr_id:
+            rr = ResponsiveReading.query.get(int(rr_id))
+            if rr:
+                rr_title = rr.title or 'Responsive Reading'
+                rr_page = rr.page_number or ''
+                rr_intro = f"Responsive Reading:\n{rr_title}"
+                if rr_page:
+                    rr_intro += f"\nPage {rr_page}"
+                add_content_slide(prs, rr_intro)
 
-                        if len(verses) <= 10:
-                            i = 0
-                            while i < len(verses):
-                                pair = verses[i]
-                                if i + 1 < len(verses):
-                                    pair += '\n' + verses[i + 1]
-                                grouped.append(pair)
-                                i += 2
-                        else:
-                            grouped = verses
+                # Clean and split content into verses (1 per slide)
+                content = rr.content.replace('\r\n', '\n').replace('_x000D_', '').strip()
+                verses = [v.strip() for v in content.split('\n\n') if v.strip()]
+                for verse in verses:
+                    add_content_slide(prs, verse, font_size=32)
 
-                        for block in grouped:
-                            add_content_slide(prs, block)
 
             elif section == 'extras_section':
                 extras_title = request.form.get('extras_title', 'Extra Songs').strip()
