@@ -352,9 +352,14 @@ def generate():
         prs.save(ppt_io)
         ppt_io.seek(0)
         filename = f"Worship_{datetime.now().strftime('%d_%m_%Y')}.pptx"
-        return send_file(ppt_io, as_attachment=True, download_name=filename, mimetype='application/vnd.openxmlformats-officedocument.presentationml.presentation')
+        return send_file(
+            ppt_io,
+            as_attachment=True,
+            download_name=filename,
+            mimetype='application/vnd.openxmlformats-officedocument.presentationml.presentation'
+        )
 
-    # ✅ FIX: Convert to JSON-serializable dictionaries
+    # ✅ Convert songs and RRs to JSON-serializable dictionaries
     songs_dicts = [dict(song) for song in songs]
     rrs_dicts = [dict(rr) for rr in rrs]
 
