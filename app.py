@@ -292,6 +292,7 @@ def generate():
             elif section == 'opening_section':
                 song_id = request.form.get('opening_id')
                 if song_id:
+
                     song = get_song_by_id(int(song_id))
                     if song:
                         meta = compose_song_meta(song)
@@ -341,7 +342,7 @@ def generate():
                         add_title_slide(prs, extras_title, song['title'])
                         add_song_slides(prs, song)
 
-            elif section == 'benediction_section':
+            elif section == 'doxology_section':
                 add_title_slide(prs, 'Doxology')
                 benedict_lines = [
                     "Praise God From Who All Blessings Flow,",
@@ -409,7 +410,7 @@ def split_into_paragraphs(text):
 def compose_song_meta(song):
     parts = []
     if song['song_number']:
-        parts.append(f"Song #{song['song_number']}")
+        parts.append(f"Song {song['song_number']}")
     if song['page_number']:
         parts.append(f"Page {song['page_number']}")
     return " | ".join(parts) if parts else ""

@@ -119,11 +119,11 @@
         <div><input type="checkbox" id="welcome_section"> Welcome Slide</div>
         <div><input type="checkbox" id="praise_section"> Praise and Worship</div>
         <div><input type="checkbox" id="opening_section"> Opening Hymn</div>
+	<div><input type="checkbox" id="rr_section"> Responsive Reading</div>
         <div><input type="checkbox" id="offertory_section"> Offertory Hymn</div>
         <div><input type="checkbox" id="communion_section"> Communion Hymn</div>
-        <div><input type="checkbox" id="rr_section"> Responsive Reading</div>
         <div><input type="checkbox" id="extras_section"> Extras</div>
-        <div><input type="checkbox" id="benediction_section"> Doxology</div>
+        <div><input type="checkbox" id="doxology_section"> Doxology</div>
     </div>
 
     <div id="sections" class="section-container"></div>
@@ -143,11 +143,11 @@
         'welcome_section': 'Welcome Slide',
         'praise_section': 'Praise and Worship',
         'opening_section': 'Opening Hymn',
+	'rr_section': 'Responsive Reading',
         'offertory_section': 'Offertory Hymn',
         'communion_section': 'Communion Hymn',
-        'rr_section': 'Responsive Reading',
         'extras_section': 'Extras',
-        'benediction_section': 'Benediction'
+        'doxology_section': 'Doxology'
     };
 
 const songs = {{ songs|tojson|safe }};
@@ -318,6 +318,10 @@ else if (id === 'offertory_section') {
     listContainer.className = 'song-list';
     box.append(searchBox, listContainer);
 }
+else if (id === 'rr_section') {
+        const select = createRRDropdown();
+        box.appendChild(select);
+}
 
 else if (id === 'communion_section') {
     const searchBox = createSongSearchBox('communion_id', 'communion_section_selected', true); // ✅ no []
@@ -328,9 +332,7 @@ else if (id === 'communion_section') {
 
 
 
-    } else if (id === 'rr_section') {
-        const select = createRRDropdown();
-        box.appendChild(select);
+    
     } else if (id === 'extras_section') {
         const input = document.createElement('input');
         input.type = 'text';
@@ -343,7 +345,7 @@ else if (id === 'communion_section') {
         listContainer.id = 'extras_selected';
         listContainer.className = 'song-list';
         box.append(searchBox, listContainer);
-    } else if (id === 'benediction_section') {
+    } else if (id === 'doxology_section') {
         const p = document.createElement('p');
         p.textContent = 'This section will include two fixed Doxology slides.';
         box.appendChild(p);
