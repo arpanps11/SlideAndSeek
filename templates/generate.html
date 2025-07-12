@@ -130,10 +130,8 @@
             'benediction_section': 'Benediction'
         };
 
-        const songOptions = `{{ songs|tojson|safe }}`;
-        const rrOptions = `{{ rrs|tojson|safe }}`;
-        const songs = JSON.parse(songOptions);
-        const rrs = JSON.parse(rrOptions);
+        const songs = {{ songs|tojson }};
+        const rrs = {{ rrs|tojson }};
 
         function createSongDropdown(name, multiple=false) {
             const select = document.createElement('select');
