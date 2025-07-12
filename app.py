@@ -285,14 +285,31 @@ def generate():
                         add_title_slide(prs, song['title'])
                         add_song_slides(prs, song)
 
-            elif section in ['opening_section', 'offertory_section', 'communion_section']:
-                label = section.split('_')[0].capitalize()
-                song_id = request.form.get(f'{label.lower()}_id')
+            elif section == 'opening_section':
+                song_id = request.form.get('opening_id')
                 if song_id:
                     song = get_song_by_id(int(song_id))
                     if song:
                         meta = compose_song_meta(song)
-                        add_title_slide(prs, f'{label} Hymn', f"{song['title']} ({meta})" if meta else song['title'])
+                        add_title_slide(prs, 'Opening Hymn', f"{song['title']} ({meta})" if meta else song['title'])
+                        add_song_slides(prs, song)
+
+            elif section == 'offertory_section':
+                song_id = request.form.get('offertory_id')
+                if song_id:
+                    song = get_song_by_id(int(song_id))
+                    if song:
+                        meta = compose_song_meta(song)
+                        add_title_slide(prs, 'Offertory Hymn', f"{song['title']} ({meta})" if meta else song['title'])
+                        add_song_slides(prs, song)
+
+            elif section == 'communion_section':
+                song_id = request.form.get('communion_id')
+                if song_id:
+                    song = get_song_by_id(int(song_id))
+                    if song:
+                        meta = compose_song_meta(song)
+                        add_title_slide(prs, 'Communion Hymn', f"{song['title']} ({meta})" if meta else song['title'])
                         add_song_slides(prs, song)
 
             elif section == 'rr_section':
