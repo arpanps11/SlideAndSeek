@@ -296,24 +296,21 @@ def generate():
                         add_song_slides(prs, song)
 
             elif section == 'rr_section':
-                        # Responsive Reading section
-        rr_id = request.form.get('responsive_reading_id')
-        if rr_id:
-            rr = ResponsiveReading.query.get(int(rr_id))
-            if rr:
-                rr_title = rr.title or 'Responsive Reading'
-                rr_page = rr.page_number or ''
-                rr_intro = f"Responsive Reading:\n{rr_title}"
-                if rr_page:
-                    rr_intro += f"\nPage {rr_page}"
-                add_content_slide(prs, rr_intro)
+                rr_id = request.form.get('responsive_reading_id')
+                if rr_id:
+                    rr = get_rr_by_id(int(rr_id))
+                    if rr:
+                        rr_title = rr['title'] or 'Responsive Reading'
+                        rr_page = rr['page_number'] or ''
+                        rr_intro = f"Responsive Reading:\n{rr_title}"
+                        if rr_page:
+                            rr_intro += f"\nPage {rr_page}"
+                        add_content_slide(prs, rr_intro)
 
-                # Clean and split content into verses (1 per slide)
-                content = rr.content.replace('\r\n', '\n').replace('_x000D_', '').strip()
-                verses = [v.strip() for v in content.split('\n\n') if v.strip()]
-                for verse in verses:
-                    add_content_slide(prs, verse, font_size=32)
-
+                        content = rr['content'].replace('\r\n', '\n').replace('_x000D_', '').strip()
+                        verses = [v.strip() for v in content.split('\n\n') if v.strip()]
+                        for verse in verses:
+                            add_content_slide(prs, verse, font_size=32)
 
             elif section == 'extras_section':
                 extras_title = request.form.get('extras_title', 'Extra Songs').strip()
@@ -360,14 +357,12 @@ def add_content_slide(prs, text, font_size=32):
     height = Inches(5)
     txBox = slide.shapes.add_textbox(left, top, width, height)
     tf = txBox.text_frame
-    tf.clear()  # Remove default paragraphs
-
+    tf.clear()
     p = tf.paragraphs[0]
     p.text = text
     p.alignment = PP_ALIGN.CENTER
     p.font.size = Pt(font_size)
     p.font.bold = True
-
 
 def add_song_slides(ppt, song, include_title_slide=False):
     if include_title_slide:
