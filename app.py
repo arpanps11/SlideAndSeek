@@ -300,12 +300,10 @@ def generate():
                 if rr_id:
                     rr = get_rr_by_id(int(rr_id))
                     if rr:
-                        rr_title = rr['title'] or 'Responsive Reading'
-                        rr_page = rr['page_number'] or ''
-                        rr_intro = f"Responsive Reading:\n{rr_title}"
+                        rr_intro = f"Responsive Reading {rr['rr_number']}\nPsalm {rr['psalm_number']}\n{rr['title']}"
                         if rr_page:
                             rr_intro += f"\nPage {rr_page}"
-                        add_content_slide(prs, rr_intro)
+                        add_content_slide(prs, rr_intro, font_size=40)
 
                         content = rr['content'].replace('\r\n', '\n').replace('_x000D_', '').strip()
                         verses = [v.strip() for v in content.split('\n\n') if v.strip()]

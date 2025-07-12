@@ -2,6 +2,8 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
     <title>Generate Worship Slides</title>
     <style>
         body {
@@ -14,13 +16,16 @@
             color: #333;
         }
         .section-selector, .section-container {
-            max-width: 800px;
-            margin: 20px auto;
-            background: white;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0px 4px 10px rgba(0,0,0,0.1);
-        }
+    width: 95%;
+    max-width: 800px;
+    margin: 20px auto;
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0px 4px 10px rgba(0,0,0,0.1);
+    box-sizing: border-box;
+}
+
         label {
             display: block;
             margin-bottom: 8px;
@@ -85,6 +90,24 @@
         .section-controls {
             text-align: right;
         }
+@media screen and (max-width: 600px) {
+    button {
+        padding: 10px;
+        width: 100%;
+        margin-top: 8px;
+    }
+
+    .controls {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .section-controls {
+        text-align: center;
+        margin-top: 10px;
+    }
+}
+
     </style>
 </head>
 <body>
@@ -131,34 +154,68 @@
 const rrs = {{ rrs|tojson }};
 
 
-    function createSongSearchBox(name, selectedContainerId) {
-        const wrapper = document.createElement('div');
+   function createSongSearchBox(name, selectedContainerId) {
+    const wrapper = document.createElement('div');
+    wrapper.style.position = 'relative';
 
-        const input = document.createElement('input');
-        input.type = 'text';
-        input.placeholder = 'Search and select songs...';
-        input.oninput = function () {
-            const query = input.value.toLowerCase();
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.placeholder = 'Search and select songs...';
+
+    const results = document.createElement('div');
+    results.style.position = 'absolute';
+    results.style.top = '100%';
+    results.style.left = '0';
+    results.style.right = '0';
+    results.style.backgroundColor = '#fff';
+    results.style.border = '1px solid #ccc';
+    results.style.zIndex = '10';
+    results.style.maxHeight = '150px';
+    results.style.overflowY = 'auto';
+    results.style.display = 'none';
+
+    input.oninput = function () {
+        const query = input.value.trim().toLowerCase();
+        results.innerHTML = '';
+        if (!query) {
+            results.style.display = 'none';
+            return;
+        }
+
+        const matches = songs.filter(song => song.title.toLowerCase().includes(query));
+        matches.forEach(song => {
+            const item = document.createElement('div');
+            item.textContent = song.title;
+            item.style.padding = '8px';
+            item.style.cursor = 'pointer';
+            item.onmouseover = () => item.style.backgroundColor = '#f0f0f0';
+            item.onmouseout = () => item.style.backgroundColor = '#fff';
+            item.onclick = () => {
+                addSelectedSong(selectedContainerId, song, name);
+                input.value = '';
+                input.focus();
+                results.innerHTML = '';
+                results.style.display = 'none';
+            };
+            results.appendChild(item);
+        });
+
+        results.style.display = matches.length > 0 ? 'block' : 'none';
+    };
+
+    // Hide results when clicking outside
+    document.addEventListener('click', function (e) {
+        if (!wrapper.contains(e.target)) {
             results.innerHTML = '';
-            songs.filter(song => song.title.toLowerCase().includes(query))
-                .forEach(song => {
-                    const btn = document.createElement('button');
-                    btn.type = 'button';
-                    btn.textContent = song.title;
-                    btn.onclick = () => {
-                        addSelectedSong(selectedContainerId, song, name);
-                    };
-                    results.appendChild(btn);
-                });
-        };
+            results.style.display = 'none';
+        }
+    });
 
-        const results = document.createElement('div');
-        results.style.marginTop = '6px';
+    wrapper.appendChild(input);
+    wrapper.appendChild(results);
+    return wrapper;
+}
 
-        wrapper.appendChild(input);
-        wrapper.appendChild(results);
-        return wrapper;
-    }
 
     function addSelectedSong(containerId, song, inputName) {
         const container = document.getElementById(containerId);
@@ -215,17 +272,7 @@ const rrs = {{ rrs|tojson }};
         return select;
     }
 
-    function createSongDropdown(name) {
-        const select = document.createElement('select');
-        select.name = name;
-        songs.forEach(song => {
-            const option = document.createElement('option');
-            option.value = song.id;
-            option.textContent = song.title;
-            select.appendChild(option);
-        });
-        return select;
-    }
+   
 
     function createSectionBox(id) {
         const box = document.createElement('div');
@@ -249,8 +296,14 @@ const rrs = {{ rrs|tojson }};
             listContainer.className = 'song-list';
             box.append(searchBox, listContainer);
         } else if (['opening_section', 'offertory_section', 'communion_section'].includes(id)) {
-            const select = createSongDropdown(id.replace('_section', '_id'));
-            box.appendChild(select);
+    const baseName = id.replace('_section', '_ids[]');
+    const searchBox = createSongSearchBox(baseName, `${id}_selected`);
+    const listContainer = document.createElement('div');
+    listContainer.id = `${id}_selected`;
+    listContainer.className = 'song-list';
+    box.append(searchBox, listContainer);
+}
+
         } else if (id === 'rr_section') {
             const select = createRRDropdown();
             box.appendChild(select);
