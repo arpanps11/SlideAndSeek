@@ -127,8 +127,9 @@
         'benediction_section': 'Benediction'
     };
 
-    const songs = JSON.parse(`{{ songs|tojson|safe }}`);
-    const rrs = JSON.parse(`{{ rrs|tojson|safe }}`);
+    const songs = {{ songs|tojson }};
+const rrs = {{ rrs|tojson }};
+
 
     function createSongSearchBox(name, selectedContainerId) {
         const wrapper = document.createElement('div');
