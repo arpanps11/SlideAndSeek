@@ -303,13 +303,31 @@ function addSelectedSong(containerId, song, inputName, single = false) {
         listContainer.id = 'praise_selected';
         listContainer.className = 'song-list';
         box.append(searchBox, listContainer);
-    } else if (['opening_section', 'offertory_section', 'communion_section'].includes(id)) {
-    const baseName = id.replace('_section', '_ids[]');
-    const searchBox = createSongSearchBox(baseName, `${id}_selected`, true);  // pass true for single
+    } else if (id === 'opening_section') {
+    const searchBox = createSongSearchBox('opening_id', 'opening_section_selected', true); // ✅ no []
     const listContainer = document.createElement('div');
-    listContainer.id = `${id}_selected`;
+    listContainer.id = 'opening_section_selected';
     listContainer.className = 'song-list';
     box.append(searchBox, listContainer);
+}
+
+else if (id === 'offertory_section') {
+    const searchBox = createSongSearchBox('offertory_id', 'offertory_section_selected', true); // ✅ no []
+    const listContainer = document.createElement('div');
+    listContainer.id = 'offertory_section_selected';
+    listContainer.className = 'song-list';
+    box.append(searchBox, listContainer);
+}
+
+else if (id === 'communion_section') {
+    const searchBox = createSongSearchBox('communion_id', 'communion_section_selected', true); // ✅ no []
+    const listContainer = document.createElement('div');
+    listContainer.id = 'communion_section_selected';
+    listContainer.className = 'song-list';
+    box.append(searchBox, listContainer);
+
+
+
     } else if (id === 'rr_section') {
         const select = createRRDropdown();
         box.appendChild(select);
