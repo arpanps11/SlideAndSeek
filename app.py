@@ -336,7 +336,7 @@ def generate():
         filename = f"Worship_{datetime.now().strftime('%d_%m_%Y')}.pptx"
         return send_file(ppt_io, as_attachment=True, download_name=filename, mimetype='application/vnd.openxmlformats-officedocument.presentationml.presentation')
 
-    return render_template('generate.html', songs=[dict(song) for song in songs], rrs=[dict(rr) for rr in rrs])
+    return render_template('generate.html', songs=songs, rrs=rrs)
 
 # ---------- Utility Functions ----------
 def add_title_slide(ppt, title, subtitle=None):
