@@ -150,8 +150,8 @@
         'benediction_section': 'Benediction'
     };
 
-    const songs = {{ songs|tojson }};
-const rrs = {{ rrs|tojson }};
+const songs = {{ songs|tojson|safe }};
+    const rrs = {{ rrs|tojson|safe }};
 
 
    function createSongSearchBox(name, selectedContainerId) {
