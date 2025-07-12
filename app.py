@@ -301,6 +301,7 @@ def generate():
                     rr = get_rr_by_id(int(rr_id))
                     if rr:
                         rr_intro = f"Responsive Reading {rr['rr_number']}\nPsalm {rr['psalm_number']}\n{rr['title']}"
+                        rr_page = rr['page_number']
                         if rr_page:
                             rr_intro += f"\nPage {rr_page}"
                         add_content_slide(prs, rr_intro, font_size=40)
@@ -336,7 +337,11 @@ def generate():
         filename = f"Worship_{datetime.now().strftime('%d_%m_%Y')}.pptx"
         return send_file(ppt_io, as_attachment=True, download_name=filename, mimetype='application/vnd.openxmlformats-officedocument.presentationml.presentation')
 
-    return render_template('generate.html', songs=songs, rrs=rrs)
+    # ✅ FIX: Convert to JSON-serializable dictionaries
+    songs_dicts = [dict(song) for song in songs]
+    rrs_dicts = [dict(rr) for rr in rrs]
+
+    return render_template('generate.html', songs=songs_dicts, rrs=rrs_dicts)
 
 # ---------- Utility Functions ----------
 def add_title_slide(ppt, title, subtitle=None):
