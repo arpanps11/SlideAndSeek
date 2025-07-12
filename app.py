@@ -37,8 +37,7 @@ def verify():
             error = "Incorrect password. Try again."
     return render_template('verify.html', error=error, next=next_page)
 
-# ---------- Songs Routes Unchanged (add, edit, search) ----------
-# ---------- Responsive Reading Routes Unchanged (rr_add, rr_search, rr_edit) ----------
+# ---------- Song Management Routes (add/edit/search) ----------
 @app.route('/add', methods=['GET', 'POST'])
 def add_song():
     if not session.get('authenticated'):
@@ -148,12 +147,7 @@ def search():
     conn.close()
     return render_template('search.html', results=results, searched=searched, query=query, all_songs=all_songs)
 
-# ---------- Responsive Readings ----------
-
-@app.route('/rr_home')
-def rr_home():
-    return render_template('rr_home.html')
-
+# ---------- Responsive Reading Management ----------
 @app.route('/rr_add', methods=['GET', 'POST'])
 def rr_add():
     if not session.get('authenticated'):
@@ -180,17 +174,14 @@ def rr_add():
             conn.commit()
             conn.close()
             flash("Responsive Reading added successfully.")
-            return redirect(url_for('rr_add'))  # 🔁 This resets the form
+            return redirect(url_for('rr_add'))
 
     return render_template('rr_add.html', error=error)
 
 @app.route('/rr_search', methods=['GET', 'POST'])
 def rr_search():
-    conn = sqlite3.connect('songs.db')
-    conn.row_factory = sqlite3.Row
+    conn = get_db_connection()
     cursor = conn.cursor()
-
-    # Always fetch the dropdown list
     cursor.execute("SELECT id, rr_number, psalm_number FROM responsive_readings ORDER BY rr_number ASC")
     rr_list = cursor.fetchall()
 
@@ -206,9 +197,7 @@ def rr_search():
             rr = cursor.fetchone()
 
     conn.close()
-
     return render_template('rr_search.html', rr_list=rr_list, rr=rr, selected_id=selected_id, searched=searched)
-
 
 @app.route('/rr_edit/<int:rr_id>', methods=['GET', 'POST'])
 def rr_edit(rr_id):
@@ -249,8 +238,7 @@ def rr_edit(rr_id):
     conn.close()
     return render_template('rr_edit.html', rr=rr, error=error)
 
-
-# ---------- Generate Slides Route ----------
+# ---------- Slide Generator ----------
 @app.route('/generate', methods=['GET', 'POST'])
 def generate():
     conn = get_db_connection()
@@ -283,19 +271,18 @@ def generate():
 
         for section in section_order:
             if section == 'welcome_section':
-    welcome_text = request.form.get('welcome_text', 'Welcome to the Worship Service').replace('_x000D_', '').strip()
-    add_title_slide(prs, 'Welcome', welcome_text)
+                welcome_text = request.form.get('welcome_text', 'Welcome to the Worship Service').replace('_x000D_', '').strip()
+                add_title_slide(prs, 'Welcome', welcome_text)
 
             elif section == 'praise_section':
-    praise_ids = request.form.getlist('praise_ids[]')
-    if praise_ids:
-        add_title_slide(prs, "Praise and Worship")
-    for song_id in praise_ids:
-        song = get_song_by_id(int(song_id))
-        if song:
-            add_title_slide(prs, song['title'])
-            add_song_slides(prs, song)
-
+                praise_ids = request.form.getlist('praise_ids[]')
+                if praise_ids:
+                    add_title_slide(prs, "Praise and Worship")
+                for song_id in praise_ids:
+                    song = get_song_by_id(int(song_id))
+                    if song:
+                        add_title_slide(prs, song['title'])
+                        add_song_slides(prs, song)
 
             elif section in ['opening_section', 'offertory_section', 'communion_section']:
                 label = section.split('_')[0].capitalize()
@@ -308,48 +295,42 @@ def generate():
                         add_song_slides(prs, song)
 
             elif section == 'rr_section':
-    rr_id = request.form.get('rr_id')
-    if rr_id:
-        rr = get_rr_by_id(int(rr_id))
-        if rr:
-            title = f"Responsive Reading {rr['rr_number']}"
-            subtitle = f"Psalm {rr['psalm_number']} | Page {rr['page_number']}" if rr['page_number'] else f"Psalm {rr['psalm_number']}"
-            add_title_slide(prs, title, subtitle)
-
-            verses = [v.strip().replace('_x000D_', '').replace('\r', '') for v in rr['content'].split('\n') if v.strip()]
-            grouped = []
-            if len(verses) <= 10:
-                for i in range(0, len(verses), 2):
-                    grouped.append('\n'.join(verses[i:i+2]))
-            else:
-                grouped = verses
-            for block in grouped:
-                add_content_slide(prs, block)
-
+                rr_id = request.form.get('rr_id')
+                if rr_id:
+                    rr = get_rr_by_id(int(rr_id))
+                    if rr:
+                        title = f"Responsive Reading {rr['rr_number']}"
+                        subtitle = f"Psalm {rr['psalm_number']} | Page {rr['page_number']}" if rr['page_number'] else f"Psalm {rr['psalm_number']}"
+                        add_title_slide(prs, title, subtitle)
+                        verses = [v.strip().replace('_x000D_', '').replace('\r', '') for v in rr['content'].split('\n') if v.strip()]
+                        grouped = []
+                        if len(verses) <= 10:
+                            for i in range(0, len(verses), 2):
+                                grouped.append('\n'.join(verses[i:i+2]))
+                        else:
+                            grouped = verses
+                        for block in grouped:
+                            add_content_slide(prs, block)
 
             elif section == 'extras_section':
-    extras_title = request.form.get('extras_title', 'Extra Songs').strip()
-    extras_ids = request.form.getlist('extras_ids[]')
-    for song_id in extras_ids:
-        song = get_song_by_id(int(song_id))
-        if song:
-            slide_title = extras_title
-            slide_subtitle = song['title']
-            add_title_slide(prs, slide_title, slide_subtitle)
-            add_song_slides(prs, song)
-
+                extras_title = request.form.get('extras_title', 'Extra Songs').strip()
+                extras_ids = request.form.getlist('extras_ids[]')
+                for song_id in extras_ids:
+                    song = get_song_by_id(int(song_id))
+                    if song:
+                        add_title_slide(prs, extras_title, song['title'])
+                        add_song_slides(prs, song)
 
             elif section == 'benediction_section':
-    add_title_slide(prs, 'Benediction')
-    benedict_lines = [
-        "Praise God From Who All Blessings Flow,",
-        "Praise Him All Creatures Here Below,",
-        "Praise Him Above Ye Heavenly Hosts",
-        "Praise Father, Son and Holy Ghost",
-        "Amen"
-    ]
-    add_content_slide(prs, '\n'.join(benedict_lines))
-
+                add_title_slide(prs, 'Benediction')
+                benedict_lines = [
+                    "Praise God From Who All Blessings Flow,",
+                    "Praise Him All Creatures Here Below,",
+                    "Praise Him Above Ye Heavenly Hosts",
+                    "Praise Father, Son and Holy Ghost",
+                    "Amen"
+                ]
+                add_content_slide(prs, '\n'.join(benedict_lines))
 
         ppt_io = BytesIO()
         prs.save(ppt_io)
@@ -357,17 +338,9 @@ def generate():
         filename = f"Worship_{datetime.now().strftime('%d_%m_%Y')}.pptx"
         return send_file(ppt_io, as_attachment=True, download_name=filename, mimetype='application/vnd.openxmlformats-officedocument.presentationml.presentation')
 
-    return render_template(
-    'generate.html',
-    songs=[dict(song) for song in songs],
-    rrs=[dict(rr) for rr in rrs]
-)
+    return render_template('generate.html', songs=[dict(song) for song in songs], rrs=[dict(rr) for rr in rrs])
 
-
-# ---------- Slide Utility Functions ----------
-from pptx.util import Inches, Pt
-from pptx.enum.text import PP_ALIGN
-
+# ---------- Utility Functions ----------
 def add_title_slide(ppt, title, subtitle=None):
     slide_layout = ppt.slide_layouts[0]
     slide = ppt.slides.add_slide(slide_layout)
@@ -380,16 +353,10 @@ def add_content_slide(ppt, content):
     slide = ppt.slides.add_slide(slide_layout)
     textbox = slide.placeholders[1]
     textbox.text = ""
-    
     p = textbox.text_frame.add_paragraph()
     p.text = content.replace('_x000D_', '').strip()
     p.font.size = Pt(32)
-    textbox.text_frame.paragraphs[0].alignment = PP_ALIGN.CENTER
-    textbox.text_frame.paragraphs[-1].alignment = PP_ALIGN.CENTER
-    textbox.text_frame.word_wrap = True
-    textbox.text_frame.auto_size = True
-
-    # Remove bullet points
+    p.alignment = PP_ALIGN.CENTER
     for paragraph in textbox.text_frame.paragraphs:
         paragraph.level = 0
         paragraph.font.size = Pt(32)
@@ -400,7 +367,6 @@ def add_song_slides(ppt, song, include_title_slide=False):
     if include_title_slide:
         meta = compose_song_meta(song)
         add_title_slide(ppt, song['title'], meta)
-
     stanzas = split_into_paragraphs(song['lyrics'])
     for stanza in stanzas:
         stanza_clean = stanza.replace('_x000D_', '').strip()
@@ -418,7 +384,7 @@ def compose_song_meta(song):
         parts.append(f"Page {song['page_number']}")
     return " | ".join(parts) if parts else ""
 
-# ---------- DB Initialization ----------
+# ---------- Initialize DB ----------
 if __name__ == '__main__':
     if not os.path.exists(DB_FILE):
         conn = get_db_connection()
