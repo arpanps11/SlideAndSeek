@@ -296,7 +296,7 @@ def generate():
                         add_song_slides(prs, song)
 
             elif section == 'rr_section':
-                rr_id = request.form.get('responsive_reading_id')
+                rr_id = request.form.get('rr_id')
                 if rr_id:
                     rr = get_rr_by_id(int(rr_id))
                     if rr:
@@ -322,7 +322,7 @@ def generate():
                         add_song_slides(prs, song)
 
             elif section == 'benediction_section':
-                add_title_slide(prs, 'Benediction')
+                add_title_slide(prs, 'Doxology')
                 benedict_lines = [
                     "Praise God From Who All Blessings Flow,",
                     "Praise Him All Creatures Here Below,",

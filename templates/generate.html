@@ -100,7 +100,7 @@
         <div><input type="checkbox" id="communion_section"> Communion Hymn</div>
         <div><input type="checkbox" id="rr_section"> Responsive Reading</div>
         <div><input type="checkbox" id="extras_section"> Extras</div>
-        <div><input type="checkbox" id="benediction_section"> Benediction</div>
+        <div><input type="checkbox" id="benediction_section"> Doxology</div>
     </div>
 
     <div id="sections" class="section-container"></div>
@@ -268,7 +268,7 @@ const rrs = {{ rrs|tojson }};
             box.append(searchBox, listContainer);
         } else if (id === 'benediction_section') {
             const p = document.createElement('p');
-            p.textContent = 'This section will include two fixed Benediction slides.';
+            p.textContent = 'This section will include two fixed Doxology slides.';
             box.appendChild(p);
         }
 
