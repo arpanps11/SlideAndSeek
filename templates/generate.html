@@ -1,160 +1,310 @@
-
 <!DOCTYPE html>
 <html>
 <head>
     <title>Generate Worship Slides</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
         body {
-            font-family: 'Segoe UI', sans-serif;
-            background-color: #fdfaf6;
-            color: #2c3e50;
+            font-family: Arial, sans-serif;
+            background-color: #f5f7fa;
             padding: 20px;
-            max-width: 600px;
-            margin: auto;
         }
+
         h1 {
             text-align: center;
-            color: #34495e;
+            color: #333;
         }
+
         form {
-            margin-top: 20px;
-        }
-        label, select, input {
-            display: block;
-            width: 100%;
-            margin-bottom: 15px;
-            font-size: 1em;
-        }
-        .section-container {
-            margin-bottom: 20px;
-            border: 1px solid #ddd;
+            max-width: 900px;
+            margin: auto;
+            background-color: #fff;
+            padding: 25px;
             border-radius: 8px;
+            box-shadow: 0 0 10px #ccc;
+        }
+
+        .section {
+            border: 1px solid #ccc;
+            border-radius: 5px;
             padding: 15px;
-            background-color: #ffffff;
+            margin-bottom: 20px;
+            background-color: #fafafa;
         }
-        .song-search {
-            margin-top: 10px;
+
+        .section h3 {
+            margin-top: 0;
+            color: #222;
         }
-        button {
-            background-color: #2c3e50;
-            color: white;
-            padding: 12px 18px;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 1em;
+
+        select, input[type="text"] {
             width: 100%;
-        }
-        button:hover {
-            background-color: #1f2d3a;
-        }
-        .chosen-song {
-            background-color: #ecf0f1;
-            margin: 5px 0;
             padding: 8px;
+            margin: 8px 0 15px 0;
+            border: 1px solid #ccc;
             border-radius: 4px;
         }
-        .extra-fields {
+
+        .song-list {
             margin-top: 10px;
         }
+
+        .song-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+
+        .song-item span {
+            flex-grow: 1;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 5px;
+        }
+
+        button {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 4px;
+            background-color: #007bff;
+            color: white;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        .remove-btn {
+            background-color: #dc3545;
+        }
+
+        .remove-btn:hover {
+            background-color: #a71d2a;
+        }
+
+        .add-btn {
+            background-color: #28a745;
+        }
+
+        .add-btn:hover {
+            background-color: #1c7430;
+        }
+
+        .submit-btn {
+            display: block;
+            margin: 30px auto 0 auto;
+            padding: 12px 24px;
+            font-size: 16px;
+            background-color: #444;
+        }
+
+        .section-order {
+            display: none;
+        }
+
+        .home-link {
+            display: block;
+            text-align: center;
+            margin-top: 30px;
+            color: #007bff;
+            text-decoration: none;
+        }
+
+        .home-link:hover {
+            text-decoration: underline;
+        }
     </style>
+
     <script>
-        let allSongs = {};
-        let selectedSections = [];
+        let sectionCounter = 0;
+        const sectionList = [];
 
-        async function fetchSongs() {
-            const response = await fetch('/search?query=');
-            const html = await response.text();
-            const parser = new DOMParser();
-            const doc = parser.parseFromString(html, 'text/html');
-            const results = doc.querySelectorAll('li');
-            results.forEach(li => {
-                const title = li.dataset.title;
-                const id = li.dataset.id;
-                allSongs[title] = id;
-            });
-        }
-
-        function isSingleSongSection(section) {
-            return ["Opening Hymn", "Offertory Hymn", "Communion Hymn"].includes(section);
-        }
-
-        function addSectionUI() {
-            selectedSections = Array.from(document.querySelectorAll('input[name="sections[]"]:checked')).map(i => i.value);
-            const container = document.getElementById('sectionsArea');
-            container.innerHTML = '';
-
-            selectedSections.forEach(section => {
-                const div = document.createElement('div');
-                div.className = 'section-container';
-                div.innerHTML = `<h3>${section}</h3>
-                    <input type="text" placeholder="Search for song..." oninput="promptSong(this, '${section}')" list="songs-${section}" />
-                    <datalist id="songs-${section}"></datalist>
-                    <div id="${section}-songs-list"></div>`;
-                container.appendChild(div);
-            });
-        }
-
-        function promptSong(input, section) {
-            const datalist = document.getElementById('songs-' + section);
-            datalist.innerHTML = '';
-            for (const title in allSongs) {
-                if (title.toLowerCase().includes(input.value.toLowerCase())) {
-                    const opt = document.createElement('option');
-                    opt.value = title;
-                    datalist.appendChild(opt);
+        function toggleSection(sectionId, checkbox) {
+            const section = document.getElementById(sectionId);
+            if (checkbox.checked) {
+                section.style.display = 'block';
+                if (!sectionList.includes(sectionId)) {
+                    sectionList.push(sectionId);
+                    updateSectionOrder();
                 }
+            } else {
+                section.style.display = 'none';
+                const index = sectionList.indexOf(sectionId);
+                if (index > -1) sectionList.splice(index, 1);
+                updateSectionOrder();
             }
+        }
 
-            input.addEventListener('change', function () {
-                const selectedId = allSongs[input.value];
-                if (selectedId) {
-                    const songList = document.getElementById(section + '-songs-list');
-                    const div = document.createElement('div');
-                    div.className = 'chosen-song';
-                    div.innerHTML = `<strong>${input.value}</strong>`;
-                    songList.innerHTML = '';  // allow only one song for single-song sections
-                    songList.appendChild(div);
-
-                    const hiddenTitle = document.createElement('input');
-                    hiddenTitle.type = 'hidden';
-                    hiddenTitle.name = `${section}_songs[]`;
-                    hiddenTitle.value = selectedId;
-                    songList.appendChild(hiddenTitle);
-
-                    if (isSingleSongSection(section)) {
-                        const extraFields = document.createElement('div');
-                        extraFields.className = 'extra-fields';
-                        extraFields.innerHTML = `
-                            <input type="text" name="${section}_number" placeholder="Song Number (optional)">
-                            <input type="text" name="${section}_page" placeholder="Page Number (optional)">
-                        `;
-                        songList.appendChild(extraFields);
-                    }
-
-                    input.value = '';
-                }
+        function updateSectionOrder() {
+            const container = document.getElementById('section_order');
+            container.innerHTML = '';
+            sectionList.forEach(id => {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'section_order[]';
+                input.value = id;
+                container.appendChild(input);
             });
         }
 
-        window.onload = fetchSongs;
+        function addSong(selectId, listId, inputNamePrefix) {
+            const select = document.getElementById(selectId);
+            const selectedOption = select.options[select.selectedIndex];
+            if (!selectedOption || !selectedOption.value) return;
+
+            const songId = selectedOption.value;
+            const songTitle = selectedOption.text;
+
+            const container = document.getElementById(listId);
+
+            // prevent duplicate
+            if (Array.from(container.children).some(child => child.dataset.songId === songId)) return;
+
+            const div = document.createElement('div');
+            div.className = 'song-item';
+            div.dataset.songId = songId;
+
+            const hiddenInput = document.createElement('input');
+            hiddenInput.type = 'hidden';
+            hiddenInput.name = inputNamePrefix + '[]';
+            hiddenInput.value = songId;
+
+            const span = document.createElement('span');
+            span.textContent = songTitle;
+
+            const upBtn = document.createElement('button');
+            upBtn.type = 'button';
+            upBtn.textContent = '↑';
+            upBtn.onclick = () => {
+                const prev = div.previousElementSibling;
+                if (prev) container.insertBefore(div, prev);
+            };
+
+            const downBtn = document.createElement('button');
+            downBtn.type = 'button';
+            downBtn.textContent = '↓';
+            downBtn.onclick = () => {
+                const next = div.nextElementSibling;
+                if (next) container.insertBefore(next, div);
+            };
+
+            const removeBtn = document.createElement('button');
+            removeBtn.type = 'button';
+            removeBtn.textContent = 'Remove';
+            removeBtn.className = 'remove-btn';
+            removeBtn.onclick = () => container.removeChild(div);
+
+            const btnGroup = document.createElement('div');
+            btnGroup.className = 'btn-group';
+            btnGroup.appendChild(upBtn);
+            btnGroup.appendChild(downBtn);
+            btnGroup.appendChild(removeBtn);
+
+            div.appendChild(hiddenInput);
+            div.appendChild(span);
+            div.appendChild(btnGroup);
+
+            container.appendChild(div);
+        }
     </script>
 </head>
 <body>
-    <h1>Generate Slides</h1>
-    <form method="post">
-        <label>Select Sections to Include:</label>
-        <label><input type="checkbox" name="sections[]" value="Praise and Worship" onchange="addSectionUI()"> Praise and Worship</label>
-        <label><input type="checkbox" name="sections[]" value="Opening Hymn" onchange="addSectionUI()"> Opening Hymn</label>
-        <label><input type="checkbox" name="sections[]" value="Responsive Reading" onchange="addSectionUI()"> Responsive Reading</label>
-        <label><input type="checkbox" name="sections[]" value="Offertory Hymn" onchange="addSectionUI()"> Offertory Hymn</label>
-        <label><input type="checkbox" name="sections[]" value="Communion Hymn" onchange="addSectionUI()"> Communion Hymn</label>
-        <label><input type="checkbox" name="sections[]" value="Extras" onchange="addSectionUI()"> Extras</label>
-        <label><input type="checkbox" name="sections[]" value="Benediction" onchange="addSectionUI()"> Benediction</label>
+    <h1>Generate Worship Slides</h1>
+    <form method="POST">
+        <div class="section">
+            <h3>Select Sections to Include</h3>
+            <label><input type="checkbox" onchange="toggleSection('welcome_section', this)"> Welcome Slide</label><br>
+            <label><input type="checkbox" onchange="toggleSection('praise_section', this)"> Praise & Worship</label><br>
+            <label><input type="checkbox" onchange="toggleSection('opening_section', this)"> Opening Hymn</label><br>
+            <label><input type="checkbox" onchange="toggleSection('offertory_section', this)"> Offertory Hymn</label><br>
+            <label><input type="checkbox" onchange="toggleSection('communion_section', this)"> Communion Hymn</label><br>
+            <label><input type="checkbox" onchange="toggleSection('rr_section', this)"> Responsive Reading</label><br>
+            <label><input type="checkbox" onchange="toggleSection('extras_section', this)"> Extras</label><br>
+            <label><input type="checkbox" onchange="toggleSection('benediction_section', this)"> Benediction</label>
+        </div>
 
-        <div id="sectionsArea"></div>
-        <button type="submit">Generate PPTX</button>
+        <div class="section" id="welcome_section" style="display:none;">
+            <h3>Welcome Slide</h3>
+            <input type="text" name="welcome_text" placeholder="Welcome message" value="Welcome to the Sunday Worship Service">
+        </div>
+
+        <div class="section" id="praise_section" style="display:none;">
+            <h3>Praise & Worship Songs</h3>
+            <select id="praise_select">
+                <option value="">-- Select a song --</option>
+                {% for song in songs %}
+                    <option value="{{ song.id }}">{{ song.title }}</option>
+                {% endfor %}
+            </select>
+            <button type="button" class="add-btn" onclick="addSong('praise_select', 'praise_list', 'praise_ids')">Add Song</button>
+            <div id="praise_list" class="song-list"></div>
+        </div>
+
+        <div class="section" id="opening_section" style="display:none;">
+            <h3>Opening Hymn</h3>
+            <select name="opening_id">
+                <option value="">-- Select one song --</option>
+                {% for song in songs %}
+                    <option value="{{ song.id }}">{{ song.title }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="section" id="offertory_section" style="display:none;">
+            <h3>Offertory Hymn</h3>
+            <select name="offertory_id">
+                <option value="">-- Select one song --</option>
+                {% for song in songs %}
+                    <option value="{{ song.id }}">{{ song.title }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="section" id="communion_section" style="display:none;">
+            <h3>Communion Hymn</h3>
+            <select name="communion_id">
+                <option value="">-- Select one song --</option>
+                {% for song in songs %}
+                    <option value="{{ song.id }}">{{ song.title }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="section" id="rr_section" style="display:none;">
+            <h3>Responsive Reading</h3>
+            <select name="rr_id">
+                <option value="">-- Select one reading --</option>
+                {% for rr in rrs %}
+                    <option value="{{ rr.id }}">RR {{ rr.rr_number }} (Psalm {{ rr.psalm_number }})</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="section" id="extras_section" style="display:none;">
+            <h3>Extras</h3>
+            <input type="text" name="extras_title" placeholder="Title (e.g., Special Number)">
+            <select id="extras_select">
+                <option value="">-- Select a song --</option>
+                {% for song in songs %}
+                    <option value="{{ song.id }}">{{ song.title }}</option>
+                {% endfor %}
+            </select>
+            <button type="button" class="add-btn" onclick="addSong('extras_select', 'extras_list', 'extras_ids')">Add Song</button>
+            <div id="extras_list" class="song-list"></div>
+        </div>
+
+        <div class="section" id="benediction_section" style="display:none;">
+            <h3>Benediction</h3>
+            <p>Two final slides will be added: "Benediction" and a closing hymn.</p>
+        </div>
+
+        <div id="section_order" class="section-order"></div>
+
+        <button type="submit" class="submit-btn">Generate PowerPoint</button>
     </form>
+
+    <a href="/" class="home-link">← Back to Home</a>
 </body>
 </html>
