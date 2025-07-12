@@ -154,7 +154,7 @@ const songs = {{ songs|tojson|safe }};
     const rrs = {{ rrs|tojson|safe }};
 
 
-   function createSongSearchBox(name, selectedContainerId) {
+   function createSongSearchBox(name, selectedContainerId, single = false) {
     const wrapper = document.createElement('div');
     wrapper.style.position = 'relative';
 
@@ -191,7 +191,7 @@ const songs = {{ songs|tojson|safe }};
             item.onmouseover = () => item.style.backgroundColor = '#f0f0f0';
             item.onmouseout = () => item.style.backgroundColor = '#fff';
             item.onclick = () => {
-                addSelectedSong(selectedContainerId, song, name);
+                addSelectedSong(selectedContainerId, song, name, single);
                 input.value = '';
                 input.focus();
                 results.innerHTML = '';
@@ -203,7 +203,6 @@ const songs = {{ songs|tojson|safe }};
         results.style.display = matches.length > 0 ? 'block' : 'none';
     };
 
-    // Hide results when clicking outside
     document.addEventListener('click', function (e) {
         if (!wrapper.contains(e.target)) {
             results.innerHTML = '';
@@ -217,23 +216,37 @@ const songs = {{ songs|tojson|safe }};
 }
 
 
-    function addSelectedSong(containerId, song, inputName) {
-        const container = document.getElementById(containerId);
+function addSelectedSong(containerId, song, inputName, single = false) {
+    const container = document.getElementById(containerId);
+    if (single) {
+        container.innerHTML = '';  // clear any existing song
+    } else {
         const exists = container.querySelector(`input[value="${song.id}"]`);
         if (exists) return;
+    }
 
-        const item = document.createElement('div');
-        item.className = 'song-item';
+    const item = document.createElement('div');
+    item.className = 'song-item';
 
-        const title = document.createElement('span');
-        title.className = 'song-title';
-        title.textContent = song.title;
+    const title = document.createElement('span');
+    title.className = 'song-title';
+    title.textContent = song.title;
 
-        const input = document.createElement('input');
-        input.type = 'hidden';
-        input.name = inputName;
-        input.value = song.id;
+    const input = document.createElement('input');
+    input.type = 'hidden';
+    input.name = inputName;
+    input.value = song.id;
 
+    const remove = document.createElement('button');
+    remove.textContent = '✖';
+    remove.onclick = () => container.removeChild(item);
+
+    const controls = document.createElement('div');
+    controls.className = 'controls';
+
+    if (single) {
+        controls.appendChild(remove);
+    } else {
         const up = document.createElement('button');
         up.textContent = '↑';
         up.onclick = () => {
@@ -248,17 +261,12 @@ const songs = {{ songs|tojson|safe }};
             if (next) container.insertBefore(next, item);
         };
 
-        const remove = document.createElement('button');
-        remove.textContent = '✖';
-        remove.onclick = () => container.removeChild(item);
-
-        const controls = document.createElement('div');
-        controls.className = 'controls';
         controls.append(up, down, remove);
-
-        item.append(title, input, controls);
-        container.appendChild(item);
     }
+
+    item.append(title, input, controls);
+    container.appendChild(item);
+}
 
     function createRRDropdown() {
         const select = document.createElement('select');
@@ -296,12 +304,12 @@ const songs = {{ songs|tojson|safe }};
         listContainer.className = 'song-list';
         box.append(searchBox, listContainer);
     } else if (['opening_section', 'offertory_section', 'communion_section'].includes(id)) {
-        const baseName = id.replace('_section', '_ids[]');
-        const searchBox = createSongSearchBox(baseName, `${id}_selected`);
-        const listContainer = document.createElement('div');
-        listContainer.id = `${id}_selected`;
-        listContainer.className = 'song-list';
-        box.append(searchBox, listContainer);
+    const baseName = id.replace('_section', '_ids[]');
+    const searchBox = createSongSearchBox(baseName, `${id}_selected`, true);  // pass true for single
+    const listContainer = document.createElement('div');
+    listContainer.id = `${id}_selected`;
+    listContainer.className = 'song-list';
+    box.append(searchBox, listContainer);
     } else if (id === 'rr_section') {
         const select = createRRDropdown();
         box.appendChild(select);
