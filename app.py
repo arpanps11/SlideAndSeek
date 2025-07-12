@@ -148,6 +148,10 @@ def search():
     return render_template('search.html', results=results, searched=searched, query=query, all_songs=all_songs)
 
 # ---------- Responsive Reading ----------
+@app.route('/rr_home')
+def rr_home():
+    return render_template('rr_home.html')
+
 @app.route('/rr_add', methods=['GET', 'POST'])
 def rr_add():
     if not session.get('authenticated'):
