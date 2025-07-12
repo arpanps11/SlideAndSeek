@@ -352,16 +352,19 @@ def add_content_slide(ppt, content):
     slide_layout = ppt.slide_layouts[1]
     slide = ppt.slides.add_slide(slide_layout)
     textbox = slide.placeholders[1]
-    textbox.text = ""
-    p = textbox.text_frame.add_paragraph()
-    p.text = content.replace('_x000D_', '').strip()
-    p.font.size = Pt(32)
-    p.alignment = PP_ALIGN.CENTER
-    for paragraph in textbox.text_frame.paragraphs:
-        paragraph.level = 0
-        paragraph.font.size = Pt(32)
-        paragraph.alignment = PP_ALIGN.CENTER
-        paragraph._element.get_or_add_pPr().remove_all_buSzTx()
+    text_frame = textbox.text_frame
+    text_frame.clear()  # Clear existing content
+
+    for line in content.split('\n'):
+        if not line.strip():
+            continue
+        p = text_frame.add_paragraph()
+        p.text = line.strip()
+        p.font.size = Pt(32)
+        p.level = 0
+        p.alignment = PP_ALIGN.CENTER
+        p._element.get_or_add_pPr().set('marL', '0')  # Remove indent
+
 
 def add_song_slides(ppt, song, include_title_slide=False):
     if include_title_slide:
