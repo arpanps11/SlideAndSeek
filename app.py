@@ -147,7 +147,7 @@ def search():
     conn.close()
     return render_template('search.html', results=results, searched=searched, query=query, all_songs=all_songs)
 
-# ---------- Responsive Reading Management ----------
+# ---------- Responsive Reading ----------
 @app.route('/rr_add', methods=['GET', 'POST'])
 def rr_add():
     if not session.get('authenticated'):
@@ -271,8 +271,9 @@ def generate():
 
         for section in section_order:
             if section == 'welcome_section':
-                welcome_text = request.form.get('welcome_text', 'Welcome to the Worship Service').replace('_x000D_', '').strip()
-                add_title_slide(prs, 'Welcome', welcome_text)
+                welcome_text = request.form.get('welcome_text', '').strip()
+                if welcome_text:
+                    add_content_slide(prs, welcome_text)
 
             elif section == 'praise_section':
                 praise_ids = request.form.getlist('praise_ids[]')
@@ -304,11 +305,18 @@ def generate():
                         add_title_slide(prs, title, subtitle)
                         verses = [v.strip().replace('_x000D_', '').replace('\r', '') for v in rr['content'].split('\n') if v.strip()]
                         grouped = []
+
                         if len(verses) <= 10:
-                            for i in range(0, len(verses), 2):
-                                grouped.append('\n'.join(verses[i:i+2]))
+                            i = 0
+                            while i < len(verses):
+                                pair = verses[i]
+                                if i + 1 < len(verses):
+                                    pair += '\n' + verses[i + 1]
+                                grouped.append(pair)
+                                i += 2
                         else:
                             grouped = verses
+
                         for block in grouped:
                             add_content_slide(prs, block)
 
@@ -352,19 +360,20 @@ def add_content_slide(ppt, content):
     slide_layout = ppt.slide_layouts[1]
     slide = ppt.slides.add_slide(slide_layout)
     textbox = slide.placeholders[1]
-    text_frame = textbox.text_frame
-    text_frame.clear()  # Clear existing content
+    textbox.text = ""
 
-    for line in content.split('\n'):
-        if not line.strip():
-            continue
-        p = text_frame.add_paragraph()
-        p.text = line.strip()
-        p.font.size = Pt(32)
-        p.level = 0
-        p.alignment = PP_ALIGN.CENTER
-        p._element.get_or_add_pPr().set('marL', '0')  # Remove indent
+    tf = textbox.text_frame
+    tf.clear()
 
+    p = tf.paragraphs[0]
+    p.text = content.replace('_x000D_', '').strip()
+    p.level = 0
+    p.font.size = Pt(32)
+    p.alignment = PP_ALIGN.CENTER
+    if hasattr(p._element, 'get_or_add_pPr'):
+        bullet = p._element.get_or_add_pPr().find(".//a:buChar")
+        if bullet is not None:
+            p._element.get_or_add_pPr().remove(bullet)
 
 def add_song_slides(ppt, song, include_title_slide=False):
     if include_title_slide:
