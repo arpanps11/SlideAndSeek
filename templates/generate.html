@@ -134,7 +134,7 @@
 </form>
 
 <div class="home-button">
-    <a href="/">← Home</a>
+    <a href="/">←  Home</a>
 </div>
 
 <script>
@@ -268,17 +268,29 @@ function addSelectedSong(containerId, song, inputName, single = false) {
     container.appendChild(item);
 }
 
-    function createRRDropdown() {
-        const select = document.createElement('select');
-        select.name = 'rr_id';
-        rrs.forEach(rr => {
-            const option = document.createElement('option');
-            option.value = rr.id;
-            option.textContent = `Responsive Reading ${rr.rr_number} - Psalm ${rr.psalm_number}`;
-            select.appendChild(option);
-        });
-        return select;
-    }
+   function createRRDropdown() {
+    const select = document.createElement('select');
+    select.name = 'rr_id';
+
+    // Add default placeholder option
+    const defaultOption = document.createElement('option');
+    defaultOption.value = '';
+    defaultOption.textContent = 'Select a Responsive Reading';
+    defaultOption.disabled = true;
+    defaultOption.selected = true;
+    select.appendChild(defaultOption);
+
+    // Add actual Responsive Reading options
+    rrs.forEach(rr => {
+        const option = document.createElement('option');
+        option.value = rr.id;
+        option.textContent = `Responsive Reading ${rr.rr_number} - Psalm ${rr.psalm_number}`;
+        select.appendChild(option);
+    });
+
+    return select;
+}
+
 
    
 
