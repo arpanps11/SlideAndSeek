@@ -5,6 +5,7 @@ from pptx import Presentation
 from pptx.util import Inches, Pt
 from io import BytesIO
 from datetime import datetime
+from pptx.enum.text import PP_ALIGN
 
 app = Flask(__name__)
 app.secret_key = 'supersecretkey_root'
@@ -261,21 +262,6 @@ def generate():
     conn.close()
 
     if request.method == 'POST':
-        def add_slide(prs, title, lines=None, font_size=32):
-            slide_layout = prs.slide_layouts[5]
-            slide = prs.slides.add_slide(slide_layout)
-            shapes = slide.shapes
-            title_shape = shapes.title
-            title_shape.text = title
-            if lines:
-                txBox = slide.shapes.add_textbox(Inches(1), Inches(1.5), Inches(8), Inches(5))
-                tf = txBox.text_frame
-                tf.clear()
-                for line in lines:
-                    p = tf.add_paragraph()
-                    p.text = line
-                    p.font.size = Pt(font_size)
-
         def get_song_by_id(song_id):
             conn = get_db_connection()
             cursor = conn.cursor()
@@ -298,85 +284,58 @@ def generate():
         for section in section_order:
             if section == 'welcome_section':
                 welcome_text = request.form.get('welcome_text', 'Welcome to the Worship Service')
-                add_slide(prs, 'Welcome', [welcome_text])
+                add_title_slide(prs, 'Welcome', welcome_text)
 
             elif section == 'praise_section':
                 praise_ids = request.form.getlist('praise_ids[]')
                 for song_id in praise_ids:
                     song = get_song_by_id(int(song_id))
                     if song:
-                        add_slide(prs, song['title'])
-                        for stanza in song['lyrics'].strip().split('\n\n'):
-                            lines = stanza.strip().split('\n')
-                            add_slide(prs, '', lines)
+                        add_title_slide(prs, song['title'])
+                        add_song_slides(prs, song)
 
-            elif section == 'opening_section':
-                song_id = request.form.get('opening_id')
+            elif section in ['opening_section', 'offertory_section', 'communion_section']:
+                label = section.split('_')[0].capitalize()
+                song_id = request.form.get(f'{label.lower()}_id')
                 if song_id:
                     song = get_song_by_id(int(song_id))
                     if song:
-                        add_slide(prs, 'Opening Hymn')
-                        add_slide(prs, song['title'])
-                        for stanza in song['lyrics'].strip().split('\n\n'):
-                            lines = stanza.strip().split('\n')
-                            add_slide(prs, '', lines)
-
-            elif section == 'offertory_section':
-                song_id = request.form.get('offertory_id')
-                if song_id:
-                    song = get_song_by_id(int(song_id))
-                    if song:
-                        add_slide(prs, 'Offertory Hymn')
-                        add_slide(prs, song['title'])
-                        for stanza in song['lyrics'].strip().split('\n\n'):
-                            lines = stanza.strip().split('\n')
-                            add_slide(prs, '', lines)
-
-            elif section == 'communion_section':
-                song_id = request.form.get('communion_id')
-                if song_id:
-                    song = get_song_by_id(int(song_id))
-                    if song:
-                        add_slide(prs, 'Communion Hymn')
-                        add_slide(prs, song['title'])
-                        for stanza in song['lyrics'].strip().split('\n\n'):
-                            lines = stanza.strip().split('\n')
-                            add_slide(prs, '', lines)
+                        meta = compose_song_meta(song)
+                        add_title_slide(prs, f'{label} Hymn', f"{song['title']} ({meta})" if meta else song['title'])
+                        add_song_slides(prs, song)
 
             elif section == 'rr_section':
                 rr_id = request.form.get('rr_id')
                 if rr_id:
                     rr = get_rr_by_id(int(rr_id))
                     if rr:
-                        add_slide(prs, f'Responsive Reading {rr["rr_number"]}', [f'Psalm {rr["psalm_number"]}'])
-                        verses = rr['content'].strip().split('\n')
-                        temp = []
-                        for verse in verses:
-                            temp.append(verse)
-                            if len(temp) == 2 or len(verse) > 80:
-                                add_slide(prs, '', temp)
-                                temp = []
-                        if temp:
-                            add_slide(prs, '', temp)
+                        title = f"Responsive Reading {rr['rr_number']}"
+                        subtitle = f"Psalm {rr['psalm_number']}" if rr['psalm_number'] else ""
+                        add_title_slide(prs, title, subtitle)
+
+                        verses = [v.strip().replace('\r', '') for v in rr['content'].split('\n') if v.strip()]
+                        grouped = []
+                        if len(verses) <= 10:
+                            for i in range(0, len(verses), 2):
+                                grouped.append('\n'.join(verses[i:i+2]))
+                        else:
+                            grouped = verses
+                        for block in grouped:
+                            add_content_slide(prs, block)
 
             elif section == 'extras_section':
                 extras_title = request.form.get('extras_title', 'Extra Songs')
                 extras_ids = request.form.getlist('extras_ids[]')
-                add_slide(prs, extras_title)
+                add_title_slide(prs, extras_title)
                 for song_id in extras_ids:
                     song = get_song_by_id(int(song_id))
                     if song:
-                        add_slide(prs, song['title'])
-                        for stanza in song['lyrics'].strip().split('\n\n'):
-                            lines = stanza.strip().split('\n')
-                            add_slide(prs, '', lines)
+                        add_title_slide(prs, song['title'])
+                        add_song_slides(prs, song)
 
             elif section == 'benediction_section':
-                add_slide(prs, 'Benediction')
-                add_slide(prs, '', ['May the grace of our Lord Jesus Christ,',
-                                    'Love of God,',
-                                    'Fellowship of the Holy Spirit',
-                                    'Be with us all'])
+                add_title_slide(prs, 'Benediction')
+                add_content_slide(prs, 'Praise God From Who All Blessings Flow,\Praise Him All Creatures Here Below,\Praise Him Above Ye Heavenly Hosts\Praise Father, Son and Holy Ghost\nAmen')
 
         ppt_io = BytesIO()
         prs.save(ppt_io)
@@ -397,10 +356,8 @@ def add_title_slide(ppt, title, subtitle=None):
 def add_content_slide(ppt, content):
     slide_layout = ppt.slide_layouts[1]
     slide = ppt.slides.add_slide(slide_layout)
-    title = slide.shapes.title
-    body = slide.placeholders[1]
-    title.text = ""
-    body.text = content
+    slide.shapes.title.text = ""
+    slide.placeholders[1].text = content.replace('_x000D_', '').strip()
 
 def add_song_slides(ppt, song, include_title_slide=False):
     if include_title_slide:
@@ -408,7 +365,9 @@ def add_song_slides(ppt, song, include_title_slide=False):
         add_title_slide(ppt, song['title'], meta)
     stanzas = split_into_paragraphs(song['lyrics'])
     for stanza in stanzas:
-        add_content_slide(ppt, stanza)
+        stanza = stanza.replace('_x000D_', '').strip()
+        if stanza:
+            add_content_slide(ppt, stanza)
 
 def split_into_paragraphs(text):
     return [p.strip() for p in text.split('\n\n') if p.strip()]

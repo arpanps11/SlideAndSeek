@@ -1,310 +1,257 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
     <title>Generate Worship Slides</title>
     <style>
         body {
-            font-family: Arial, sans-serif;
-            background-color: #f5f7fa;
+            font-family: 'Segoe UI', sans-serif;
+            background: #f2f2f2;
             padding: 20px;
         }
-
         h1 {
             text-align: center;
             color: #333;
         }
-
-        form {
-            max-width: 900px;
-            margin: auto;
-            background-color: #fff;
-            padding: 25px;
-            border-radius: 8px;
-            box-shadow: 0 0 10px #ccc;
+        .section-selector, .section-container {
+            max-width: 800px;
+            margin: 20px auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0px 4px 10px rgba(0,0,0,0.1);
         }
-
-        .section {
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            padding: 15px;
-            margin-bottom: 20px;
-            background-color: #fafafa;
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
         }
-
-        .section h3 {
-            margin-top: 0;
-            color: #222;
-        }
-
         select, input[type="text"] {
             width: 100%;
             padding: 8px;
-            margin: 8px 0 15px 0;
+            margin-bottom: 12px;
+            border-radius: 5px;
             border: 1px solid #ccc;
-            border-radius: 4px;
         }
-
-        .song-list {
-            margin-top: 10px;
-        }
-
-        .song-item {
-            display: flex;
-            align-items: center;
-            margin-bottom: 5px;
-        }
-
-        .song-item span {
-            flex-grow: 1;
-        }
-
-        .btn-group {
-            display: flex;
-            gap: 5px;
-        }
-
         button {
-            padding: 6px 12px;
-            border: none;
-            border-radius: 4px;
-            background-color: #007bff;
+            padding: 10px 16px;
+            margin-top: 10px;
+            margin-right: 8px;
+            background-color: #0077cc;
             color: white;
+            border: none;
+            border-radius: 5px;
             cursor: pointer;
         }
-
         button:hover {
-            background-color: #0056b3;
+            background-color: #005fa3;
         }
-
-        .remove-btn {
-            background-color: #dc3545;
+        .song-list, .section-box {
+            margin-top: 10px;
         }
-
-        .remove-btn:hover {
-            background-color: #a71d2a;
+        .song-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
         }
-
-        .add-btn {
-            background-color: #28a745;
+        .section-box {
+            border: 1px solid #ddd;
+            padding: 12px;
+            margin-bottom: 15px;
+            border-radius: 5px;
+            background-color: #f9f9f9;
         }
-
-        .add-btn:hover {
-            background-color: #1c7430;
+        .section-controls {
+            text-align: right;
         }
-
-        .submit-btn {
-            display: block;
-            margin: 30px auto 0 auto;
-            padding: 12px 24px;
-            font-size: 16px;
-            background-color: #444;
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
         }
-
-        .section-order {
-            display: none;
+        .checkbox-label input[type="checkbox"] {
+            margin-right: 8px;
         }
-
-        .home-link {
+        .home-button {
             display: block;
             text-align: center;
-            margin-top: 30px;
-            color: #007bff;
-            text-decoration: none;
+            margin: 30px auto 0;
         }
-
-        .home-link:hover {
-            text-decoration: underline;
+        .home-button a {
+            text-decoration: none;
+            padding: 10px 20px;
+            background-color: #333;
+            color: white;
+            border-radius: 5px;
+        }
+        .home-button a:hover {
+            background-color: #111;
         }
     </style>
-
-    <script>
-        let sectionCounter = 0;
-        const sectionList = [];
-
-        function toggleSection(sectionId, checkbox) {
-            const section = document.getElementById(sectionId);
-            if (checkbox.checked) {
-                section.style.display = 'block';
-                if (!sectionList.includes(sectionId)) {
-                    sectionList.push(sectionId);
-                    updateSectionOrder();
-                }
-            } else {
-                section.style.display = 'none';
-                const index = sectionList.indexOf(sectionId);
-                if (index > -1) sectionList.splice(index, 1);
-                updateSectionOrder();
-            }
-        }
-
-        function updateSectionOrder() {
-            const container = document.getElementById('section_order');
-            container.innerHTML = '';
-            sectionList.forEach(id => {
-                const input = document.createElement('input');
-                input.type = 'hidden';
-                input.name = 'section_order[]';
-                input.value = id;
-                container.appendChild(input);
-            });
-        }
-
-        function addSong(selectId, listId, inputNamePrefix) {
-            const select = document.getElementById(selectId);
-            const selectedOption = select.options[select.selectedIndex];
-            if (!selectedOption || !selectedOption.value) return;
-
-            const songId = selectedOption.value;
-            const songTitle = selectedOption.text;
-
-            const container = document.getElementById(listId);
-
-            // prevent duplicate
-            if (Array.from(container.children).some(child => child.dataset.songId === songId)) return;
-
-            const div = document.createElement('div');
-            div.className = 'song-item';
-            div.dataset.songId = songId;
-
-            const hiddenInput = document.createElement('input');
-            hiddenInput.type = 'hidden';
-            hiddenInput.name = inputNamePrefix + '[]';
-            hiddenInput.value = songId;
-
-            const span = document.createElement('span');
-            span.textContent = songTitle;
-
-            const upBtn = document.createElement('button');
-            upBtn.type = 'button';
-            upBtn.textContent = '↑';
-            upBtn.onclick = () => {
-                const prev = div.previousElementSibling;
-                if (prev) container.insertBefore(div, prev);
-            };
-
-            const downBtn = document.createElement('button');
-            downBtn.type = 'button';
-            downBtn.textContent = '↓';
-            downBtn.onclick = () => {
-                const next = div.nextElementSibling;
-                if (next) container.insertBefore(next, div);
-            };
-
-            const removeBtn = document.createElement('button');
-            removeBtn.type = 'button';
-            removeBtn.textContent = 'Remove';
-            removeBtn.className = 'remove-btn';
-            removeBtn.onclick = () => container.removeChild(div);
-
-            const btnGroup = document.createElement('div');
-            btnGroup.className = 'btn-group';
-            btnGroup.appendChild(upBtn);
-            btnGroup.appendChild(downBtn);
-            btnGroup.appendChild(removeBtn);
-
-            div.appendChild(hiddenInput);
-            div.appendChild(span);
-            div.appendChild(btnGroup);
-
-            container.appendChild(div);
-        }
-    </script>
 </head>
 <body>
     <h1>Generate Worship Slides</h1>
+
     <form method="POST">
-        <div class="section">
-            <h3>Select Sections to Include</h3>
-            <label><input type="checkbox" onchange="toggleSection('welcome_section', this)"> Welcome Slide</label><br>
-            <label><input type="checkbox" onchange="toggleSection('praise_section', this)"> Praise & Worship</label><br>
-            <label><input type="checkbox" onchange="toggleSection('opening_section', this)"> Opening Hymn</label><br>
-            <label><input type="checkbox" onchange="toggleSection('offertory_section', this)"> Offertory Hymn</label><br>
-            <label><input type="checkbox" onchange="toggleSection('communion_section', this)"> Communion Hymn</label><br>
-            <label><input type="checkbox" onchange="toggleSection('rr_section', this)"> Responsive Reading</label><br>
-            <label><input type="checkbox" onchange="toggleSection('extras_section', this)"> Extras</label><br>
-            <label><input type="checkbox" onchange="toggleSection('benediction_section', this)"> Benediction</label>
+        <div class="section-selector">
+            <label>Select Sections to Include (check to add):</label>
+            <div class="checkbox-label"><input type="checkbox" id="welcome_section"> Welcome Slide</div>
+            <div class="checkbox-label"><input type="checkbox" id="praise_section"> Praise and Worship</div>
+            <div class="checkbox-label"><input type="checkbox" id="opening_section"> Opening Hymn</div>
+            <div class="checkbox-label"><input type="checkbox" id="offertory_section"> Offertory Hymn</div>
+            <div class="checkbox-label"><input type="checkbox" id="communion_section"> Communion Hymn</div>
+            <div class="checkbox-label"><input type="checkbox" id="rr_section"> Responsive Reading</div>
+            <div class="checkbox-label"><input type="checkbox" id="extras_section"> Extras</div>
+            <div class="checkbox-label"><input type="checkbox" id="benediction_section"> Benediction</div>
         </div>
 
-        <div class="section" id="welcome_section" style="display:none;">
-            <h3>Welcome Slide</h3>
-            <input type="text" name="welcome_text" placeholder="Welcome message" value="Welcome to the Sunday Worship Service">
+        <div id="sections" class="section-container"></div>
+
+        <div style="text-align:center;">
+            <button type="submit">Generate PowerPoint</button>
         </div>
-
-        <div class="section" id="praise_section" style="display:none;">
-            <h3>Praise & Worship Songs</h3>
-            <select id="praise_select">
-                <option value="">-- Select a song --</option>
-                {% for song in songs %}
-                    <option value="{{ song.id }}">{{ song.title }}</option>
-                {% endfor %}
-            </select>
-            <button type="button" class="add-btn" onclick="addSong('praise_select', 'praise_list', 'praise_ids')">Add Song</button>
-            <div id="praise_list" class="song-list"></div>
-        </div>
-
-        <div class="section" id="opening_section" style="display:none;">
-            <h3>Opening Hymn</h3>
-            <select name="opening_id">
-                <option value="">-- Select one song --</option>
-                {% for song in songs %}
-                    <option value="{{ song.id }}">{{ song.title }}</option>
-                {% endfor %}
-            </select>
-        </div>
-
-        <div class="section" id="offertory_section" style="display:none;">
-            <h3>Offertory Hymn</h3>
-            <select name="offertory_id">
-                <option value="">-- Select one song --</option>
-                {% for song in songs %}
-                    <option value="{{ song.id }}">{{ song.title }}</option>
-                {% endfor %}
-            </select>
-        </div>
-
-        <div class="section" id="communion_section" style="display:none;">
-            <h3>Communion Hymn</h3>
-            <select name="communion_id">
-                <option value="">-- Select one song --</option>
-                {% for song in songs %}
-                    <option value="{{ song.id }}">{{ song.title }}</option>
-                {% endfor %}
-            </select>
-        </div>
-
-        <div class="section" id="rr_section" style="display:none;">
-            <h3>Responsive Reading</h3>
-            <select name="rr_id">
-                <option value="">-- Select one reading --</option>
-                {% for rr in rrs %}
-                    <option value="{{ rr.id }}">Responsive Reading {{ rr.rr_number }} (Psalm {{ rr.psalm_number }})</option>
-                {% endfor %}
-            </select>
-        </div>
-
-        <div class="section" id="extras_section" style="display:none;">
-            <h3>Extras</h3>
-            <input type="text" name="extras_title" placeholder="Title (e.g., Special Number)">
-            <select id="extras_select">
-                <option value="">-- Select a song --</option>
-                {% for song in songs %}
-                    <option value="{{ song.id }}">{{ song.title }}</option>
-                {% endfor %}
-            </select>
-            <button type="button" class="add-btn" onclick="addSong('extras_select', 'extras_list', 'extras_ids')">Add Song</button>
-            <div id="extras_list" class="song-list"></div>
-        </div>
-
-        <div class="section" id="benediction_section" style="display:none;">
-            <h3>Benediction</h3>
-            <p>Two final slides will be added: "Benediction" and the closing hymn.</p>
-        </div>
-
-        <div id="section_order" class="section-order"></div>
-
-        <button type="submit" class="submit-btn">Generate PowerPoint</button>
     </form>
 
-    <a href="/" class="home-link">← Back to Home</a>
+    <div class="home-button">
+        <a href="/">← Back to Home</a>
+    </div>
+
+    <script>
+        const sectionsContainer = document.getElementById('sections');
+        const sectionsMap = {
+            'welcome_section': 'Welcome Slide',
+            'praise_section': 'Praise and Worship',
+            'opening_section': 'Opening Hymn',
+            'offertory_section': 'Offertory Hymn',
+            'communion_section': 'Communion Hymn',
+            'rr_section': 'Responsive Reading',
+            'extras_section': 'Extras',
+            'benediction_section': 'Benediction'
+        };
+
+        const songOptions = `{{ songs|tojson|safe }}`;
+        const rrOptions = `{{ rrs|tojson|safe }}`;
+        const songs = JSON.parse(songOptions);
+        const rrs = JSON.parse(rrOptions);
+
+        function createSongDropdown(name, multiple=false) {
+            const select = document.createElement('select');
+            select.name = name;
+            if (multiple) select.multiple = true;
+            songs.forEach(song => {
+                const option = document.createElement('option');
+                option.value = song.id;
+                option.textContent = song.title;
+                select.appendChild(option);
+            });
+            return select;
+        }
+
+        function createRRDropdown() {
+            const select = document.createElement('select');
+            select.name = 'rr_id';
+            rrs.forEach(rr => {
+                const option = document.createElement('option');
+                option.value = rr.id;
+                option.textContent = `Responsive Reading ${rr.rr_number} - Psalm ${rr.psalm_number}`;
+                select.appendChild(option);
+            });
+            return select;
+        }
+
+        function createSectionBox(id) {
+            const box = document.createElement('div');
+            box.className = 'section-box';
+            box.dataset.sectionId = id;
+
+            const title = document.createElement('h3');
+            title.textContent = sectionsMap[id];
+            box.appendChild(title);
+
+            if (id === 'welcome_section') {
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.name = 'welcome_text';
+                input.placeholder = 'Welcome to the Worship Service';
+                box.appendChild(input);
+            }
+
+            else if (id === 'praise_section') {
+                const select = createSongDropdown('praise_ids[]', true);
+                box.appendChild(select);
+            }
+
+            else if (['opening_section', 'offertory_section', 'communion_section'].includes(id)) {
+                const select = createSongDropdown(id.replace('_section', '_id'));
+                box.appendChild(select);
+            }
+
+            else if (id === 'rr_section') {
+                const select = createRRDropdown();
+                box.appendChild(select);
+            }
+
+            else if (id === 'extras_section') {
+                const titleInput = document.createElement('input');
+                titleInput.type = 'text';
+                titleInput.name = 'extras_title';
+                titleInput.placeholder = 'Enter Extras Section Title';
+                box.appendChild(titleInput);
+
+                const select = createSongDropdown('extras_ids[]', true);
+                box.appendChild(select);
+            }
+
+            else if (id === 'benediction_section') {
+                const p = document.createElement('p');
+                p.textContent = 'This section will include two fixed Benediction slides.';
+                box.appendChild(p);
+            }
+
+            const controls = document.createElement('div');
+            controls.className = 'section-controls';
+
+            const up = document.createElement('button');
+            up.type = 'button';
+            up.textContent = '↑';
+            up.onclick = () => {
+                const prev = box.previousElementSibling;
+                if (prev) sectionsContainer.insertBefore(box, prev);
+            };
+
+            const down = document.createElement('button');
+            down.type = 'button';
+            down.textContent = '↓';
+            down.onclick = () => {
+                const next = box.nextElementSibling;
+                if (next) sectionsContainer.insertBefore(next, box);
+            };
+
+            const hidden = document.createElement('input');
+            hidden.type = 'hidden';
+            hidden.name = 'section_order[]';
+            hidden.value = id;
+
+            controls.appendChild(up);
+            controls.appendChild(down);
+            box.appendChild(hidden);
+            box.appendChild(controls);
+
+            return box;
+        }
+
+        Object.keys(sectionsMap).forEach(id => {
+            document.getElementById(id).addEventListener('change', function() {
+                if (this.checked) {
+                    const sectionBox = createSectionBox(id);
+                    sectionsContainer.appendChild(sectionBox);
+                } else {
+                    const toRemove = [...sectionsContainer.children].find(div => div.dataset.sectionId === id);
+                    if (toRemove) sectionsContainer.removeChild(toRemove);
+                }
+            });
+        });
+    </script>
 </body>
 </html>
